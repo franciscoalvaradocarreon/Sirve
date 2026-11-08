@@ -14,8 +14,8 @@ restricciones y el orden de las operaciones.
 SIRVE/
 ├── BackendJava/        API REST · Spring Boot 4 · Java 21 · Maven
 ├── FrontendReact/      Interfaz · React 19 · Vite · TypeScript · Tailwind 4
-├── db/                 Scripts de instalación de la base, en orden
-├── docs/               Contrato de API y documentación
+├── db/                 Scripts de instalación de la base (fuera de Git)
+├── docs/               Contrato de API y documentación (fuera de Git)
 ├── Dockerfile          Imagen única: el jar lleva el front dentro
 ├── docker-compose.yml  Proyecto sirve-p: base propia + aplicación
 └── Caddyfile.sitio     Bloque para el proxy del servidor
@@ -35,6 +35,10 @@ contenedor, un solo puerto, sin CORS que coordinar en producción.
 - PostgreSQL 17
 
 ### Base de datos
+
+> **`db/` y `docs/` no están en el repositorio.** Se conservan en disco pero no se
+> versionan: la base se instala con esos scripts y el servidor los recibe aparte.
+> Si clonas el proyecto, pídelos.
 
 Los scripts de `db/` se ejecutan **en orden alfabético**. El `00` crea el esquema
 completo; los demás cargan catálogos.
@@ -129,7 +133,8 @@ Decisiones que conviene conocer:
 
 ## API
 
-El contrato completo está en [`docs/API-CONTRATO.md`](docs/API-CONTRATO.md).
+El contrato completo está en `docs/API-CONTRATO.md`, que se mantiene fuera del
+repositorio junto con los scripts de la base.
 
 ```
 GET  /api/procesos

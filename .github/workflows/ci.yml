@@ -154,10 +154,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # La carpeta db/ no se versiona: vive fuera del repositorio. Si no está,
+      # la prueba de esquema no aplica y se omite con un aviso, en lugar de
+      # fallar por un archivo que este repositorio no contiene.
+      - name: ¿Están los scripts de la base?
+        id: hay
+        run: |
+          if [ -d db ] && compgen -G "db/*.sql" > /dev/null; then
+            echo "existe=true" >> "$GITHUB_OUTPUT"
+            echo "La carpeta db/ está presente: se prueba la instalación."
+          else
+            echo "existe=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::La carpeta db/ no está en el repositorio; se omite la prueba de esquema."
+          fi
+
       - name: Crear la base
+        if: steps.hay.outputs.existe == 'true'
         run: psql -h 127.0.0.1 -U postgres -c 'CREATE DATABASE "SIRVE";'
 
       - name: Aplicar los scripts en orden
+        if: steps.hay.outputs.existe == 'true'
         run: |
           set -e
           for archivo in $(ls db/*.sql | sort); do
@@ -166,6 +182,7 @@ jobs:
           done
 
       - name: Verificar el resultado
+        if: steps.hay.outputs.existe == 'true'
         run: |
           psql -h 127.0.0.1 -U postgres -d SIRVE -v ON_ERROR_STOP=1 -f .github/comprobar-esquema.sql
 
