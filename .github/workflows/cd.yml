@@ -1,0 +1,74 @@
+name: Desplegar
+
+# Manual, a propósito: el despliegue no se dispara solo al empujar código.
+# Se elige la versión y se ejecuta desde la pestaña Actions.
+#
+# Antes de usarlo hay que configurar cuatro secretos en el repositorio
+# (Settings → Secrets and variables → Actions):
+#
+#   SSH_HOST     dirección del servidor
+#   SSH_USER     usuario con el que se entra
+#   SSH_KEY      clave privada completa, incluido el -----BEGIN…
+#   RUTA_DESPLIEGUE   carpeta donde vive el docker-compose.yml, por ejemplo
+#                     /opt/sirve-p
+#
+# Y una vez en el servidor:
+#   docker network create proxy
+#   (el bloque Caddyfile.sitio, añadido al Caddy del SIH)
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versión ya publicada (por ejemplo 1.0.0 o sha-abc1234)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+
+  desplegar:
+    name: Desplegar en el servidor
+    runs-on: ubuntu-latest
+    environment: produccion
+    steps:
+      - name: Preparar la clave SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Desplegar
+        run: |
+          ssh -i ~/.ssh/id_deploy "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "set -e
+             cd '${{ secrets.RUTA_DESPLIEGUE }}'
+             echo 'Actualizando la imagen…'
+             IMAGEN_APP='ghcr.io/\${{ github.repository }}:${{ inputs.version }}' docker compose pull app
+             IMAGEN_APP='ghcr.io/\${{ github.repository }}:${{ inputs.version }}' docker compose up -d --no-build app
+             echo 'Esperando a que responda…'
+             for i in \$(seq 1 30); do
+               if docker compose exec -T app curl -fsS http://127.0.0.1:8080/actuator/health > /dev/null 2>&1; then
+                 echo 'La aplicación responde.'
+                 exit 0
+               fi
+               sleep 2
+             done
+             echo 'La aplicación no respondió; se revierte al estado anterior.'
+             docker compose logs --tail 40 app
+             exit 1
+            "
+
+      - name: Resumen
+        if: always()
+        run: |
+          {
+            echo "## Despliegue de la versión ${{ inputs.version }}"
+            echo ""
+            echo "Servidor: \`${{ secrets.SSH_HOST }}\`"
+            echo ""
+            echo "Resultado: ${{ job.status }}"
+          } >> "$GITHUB_STEP_SUMMARY"

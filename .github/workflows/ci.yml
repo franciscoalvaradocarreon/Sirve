@@ -1,0 +1,207 @@
+name: CI (compilar, revisar el esquema, construir la imagen)
+
+# Se ejecuta en cada push y en cada pull request. Es la aduana: si no compila,
+# si el front no pasa los tipos, o si los scripts de la base no instalan una
+# base limpia, no pasa.
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+# Si se empujan dos commits seguidos, cancela la corrida anterior del mismo
+# ramal: no tiene sentido gastar minutos en una versión que ya quedó atrás.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  # --------------------------------------------------------------------------
+  # Guardia de secretos
+  #
+  # El repositorio es privado, pero eso no cubre un descuido: pegar una clave
+  # en un script, en un properties o en el README. Imprime SOLO el archivo y la
+  # línea, nunca el valor.
+  # --------------------------------------------------------------------------
+  guardia-secretos:
+    name: Guardia de secretos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Buscar credenciales en los archivos versionados
+        shell: bash
+        run: |
+          set -uo pipefail
+
+          # Variables con valor: se pide un valor de 6 caracteres o más, y que
+          # no empiece por $ ni por < (para no marcar vacíos, marcadores ni
+          # referencias del tipo ${OTRA_CLAVE}).
+          P_VARIABLES='^[[:space:]]*(export[[:space:]]+)?(DB_PASSWORD|DB_PASSWORD_APP|POSTGRES_PASSWORD|JWT_SECRETO|SSH_KEY|MAIL_PASSWORD)[[:space:]]*=[[:space:]]*[^[:space:]<>$][^[:space:]]{5,}'
+          P_PRIVADA='-----BEGIN [A-Z ]*PRIVATE KEY-----'
+          P_URL='[a-z]+://[A-Za-z0-9._-]+:[^@[:space:]]{6,}@'
+          P_TOKENS='(ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|AKIA[0-9A-Z]{16})'
+
+          fallos=0
+          for patron in "$P_VARIABLES" "$P_PRIVADA" "$P_URL" "$P_TOKENS"; do
+            # Las plantillas (*.ejemplo) llevan valores de mentira a propósito.
+            # El «cut» deja solo archivo:línea: el valor no se imprime nunca.
+            hallazgos="$(git grep -nI -E "$patron" -- . \
+              ':!*.ejemplo' ':!*.example' ':!package-lock.json' ':!*.lock' \
+              | cut -d: -f1,2 || true)"
+            if [ -n "$hallazgos" ]; then
+              echo "::error::Posible secreto en el repositorio:"
+              echo "$hallazgos"
+              fallos=1
+            fi
+          done
+
+          if [ "$fallos" -ne 0 ]; then
+            echo "Quita el valor y usa una variable de entorno o un archivo ignorado."
+            exit 1
+          fi
+          echo "Sin credenciales en los archivos versionados."
+
+  # --------------------------------------------------------------------------
+  # Frontend
+  # --------------------------------------------------------------------------
+  frontend:
+    name: Front (React + Vite)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: FrontendReact
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: FrontendReact/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci --no-audit --no-fund
+
+      - name: Revisar los tipos
+        run: npx tsc -b
+
+      - name: Construir
+        run: npm run build
+
+  # --------------------------------------------------------------------------
+  # Backend
+  # --------------------------------------------------------------------------
+  backend:
+    name: Backend (Spring Boot · Java 21)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: BackendJava
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Compilar y empaquetar
+        run: mvn -B --no-transfer-progress package -DskipTests
+
+      - name: Comprobar que el jar arranca
+        run: |
+          # Sin base de datos la aplicación arranca igual: la conexión se abre
+          # en la primera consulta, no al inicio. Lo que se verifica aquí es
+          # que el artefacto sea ejecutable y que Tomcat levante.
+          nohup java -jar target/sirve.jar --server.port=8099 > /tmp/app.log 2>&1 &
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:8099/actuator/health > /dev/null 2>&1; then
+              echo "La aplicación arrancó y responde."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::La aplicación no respondió en 80 segundos"
+          tail -40 /tmp/app.log
+          exit 1
+
+  # --------------------------------------------------------------------------
+  # Esquema: los scripts deben instalar una base limpia
+  #
+  # Es la prueba que no teníamos. Cada vez que se toca un script de la base,
+  # esto comprueba que la secuencia completa sigue funcionando desde cero.
+  # --------------------------------------------------------------------------
+  esquema:
+    name: Esquema (instalación limpia en PostgreSQL 17)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: prueba
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGPASSWORD: prueba
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Crear la base
+        run: psql -h 127.0.0.1 -U postgres -c 'CREATE DATABASE "SIRVE";'
+
+      - name: Aplicar los scripts en orden
+        run: |
+          set -e
+          for archivo in $(ls db/*.sql | sort); do
+            echo "→ $archivo"
+            psql -h 127.0.0.1 -U postgres -d SIRVE -v ON_ERROR_STOP=1 -q -f "$archivo"
+          done
+
+      - name: Verificar el resultado
+        run: |
+          psql -h 127.0.0.1 -U postgres -d SIRVE -v ON_ERROR_STOP=1 -f .github/comprobar-esquema.sql
+
+  # --------------------------------------------------------------------------
+  # Imagen: que el Dockerfile construya
+  # --------------------------------------------------------------------------
+  imagen:
+    name: Imagen Docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Construir sin publicar
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: sirve-p:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Comprobar que la imagen arranca
+        run: |
+          docker run -d --name prueba -e DB_PASSWORD=x -p 8098:8080 sirve-p:ci
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:8098/actuator/health > /dev/null 2>&1; then
+              echo "La imagen arranca y responde."
+              docker rm -f prueba > /dev/null
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::La imagen no respondió"
+          docker logs prueba
+          docker rm -f prueba > /dev/null
+          exit 1

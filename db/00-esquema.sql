@@ -1,4 +1,4 @@
-﻿-- =====================================================================
+-- =====================================================================
 -- SIRVE-P · Esquema completo del MVP
 -- ---------------------------------------------------------------------
 -- Instalación desde cero. Crea el esquema `sirve` con las 14 tablas del
@@ -136,6 +136,11 @@ ALTER TABLE sirve.captura_voto ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY 
 CREATE TABLE sirve.casilla (
     id integer NOT NULL,
     id_seccion integer NOT NULL,
+    -- Distrito local de la casilla. Columna heredada del modelo anterior:
+    -- el script 19 la copia a seccion y la elimina, porque el distrito
+    -- pertenece a la sección y no a la casilla. Existe aquí para que los
+    -- scripts 11 y 12 puedan cargar el dato desde los libros.
+    id_distrito integer,
     clave text NOT NULL,
     tipo text NOT NULL,
     direccion text,
