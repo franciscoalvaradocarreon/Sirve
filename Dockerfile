@@ -57,6 +57,12 @@ COPY --from=back /build/target/sirve.jar ./app.jar
 USER sirve
 EXPOSE 8080
 
+# Puerto dentro del contenedor. La aplicación usa ${PUERTO:8081} pensando en
+# el desarrollo local; aquí se fija el 8080, que es el que publica el compose
+# y al que apunta Caddy. Sin esta línea la aplicación escucha en el 8081 y el
+# contenedor arranca sano pero nadie atiende el puerto publicado.
+ENV PUERTO=8080
+
 # La JVM respeta el límite de memoria del contenedor (mem_limit en compose).
 ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -XX:+UseContainerSupport"
 
