@@ -1,21 +1,33 @@
 # ============================================================================
-# Bloque para pegar en el Caddyfile del SIH (el que ya corre en el servidor).
+# Bloque de Caddy para SIRVE-P
 #
-# Requisitos previos, una sola vez:
+# Se pega en el Caddyfile del servidor del SIH, que ya escucha en 80 y 443.
+# Solo puede haber un proceso escuchando esos puertos, así que SIRVE se cuelga
+# del mismo proxy y se alcanza por la red interna de Docker.
+#
+# Requisitos, una sola vez en el servidor:
 #   1. docker network create proxy
-#   2. En el compose del SIH, agregar la red externa "proxy" al servicio caddy
-#      y al de la app no hace falta: solo el caddy la necesita para alcanzar
-#      los contenedores de SIRVE.
+#   2. El servicio caddy del compose del SIH debe estar en esa red externa
+#   3. El contenedor de SIRVE se llama sirve-p-app-1 y escucha en el 8080
 #
-# El contenedor de SIRVE se llama sirve-p-app-1 (proyecto sirve-p, servicio
-# app) y escucha en el 8080 dentro de la red.
+# Elige UNA de las dos formas y borra la otra.
 # ============================================================================
 
-sirve.tudominio.mx {
+
+# ----------------------------------------------------------------------------
+# FORMA 1 · Sin dominio, por dirección IP y puerto
+#
+# Se usa mientras no haya dominio. Entra por http://IP-DEL-SERVIDOR:8088
+#
+# Sin certificado: los datos viajan sin cifrar. Para pruebas y para uso
+# interno alcanza; antes de cargar datos reales conviene el dominio.
+#
+# Si el 8088 está ocupado, cambia el puerto aquí y en el firewall.
+# ----------------------------------------------------------------------------
+
+:8088 {
 	encode gzip zstd
 
-	# Cabeceras de seguridad mínimas. El front es una SPA, así que las rutas
-	# que no son /api se resuelven con index.html.
 	header {
 		X-Content-Type-Options nosniff
 		X-Frame-Options SAMEORIGIN
@@ -24,3 +36,40 @@ sirve.tudominio.mx {
 
 	reverse_proxy sirve-p-app-1:8080
 }
+
+
+# ----------------------------------------------------------------------------
+# FORMA 2 · Con dominio, cuando lo tengas
+#
+# Cambia sirve.tudominio.mx por el nombre real, crea el registro DNS
+# (tipo A, nombre «sirve», valor la IP del servidor) y Caddy pide el
+# certificado solo. No hay que tocar nada más.
+#
+# Caddy usa el puerto 443 y redirige el 80 a HTTPS automáticamente.
+# ----------------------------------------------------------------------------
+
+# sirve.tudominio.mx {
+# 	encode gzip zstd
+#
+# 	header {
+# 		X-Content-Type-Options nosniff
+# 		X-Frame-Options SAMEORIGIN
+# 		Referrer-Policy strict-origin-when-cross-origin
+# 		Strict-Transport-Security max-age=31536000
+# 	}
+#
+# 	reverse_proxy sirve-p-app-1:8080
+# }
+
+
+# ----------------------------------------------------------------------------
+# Después de editar
+#
+# Validar antes de recargar, para no tumbar el SIH por un error de sintaxis:
+#
+#     docker exec sih-ia-caddy-1 caddy validate --config /etc/caddy/Caddyfile
+#     docker exec sih-ia-caddy-1 caddy reload   --config /etc/caddy/Caddyfile
+#
+# Si el SIH corre en otro nombre de contenedor, ajústalo:
+#     docker ps --format '{{.Names}}' | grep caddy
+# ----------------------------------------------------------------------------
