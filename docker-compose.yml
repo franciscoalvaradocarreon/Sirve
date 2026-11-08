@@ -34,6 +34,11 @@ services:
       POSTGRES_DB:       "${DB_NAME:-SIRVE}"
       POSTGRES_USER:     "${DB_ADMIN_USER:-User_app}"
       POSTGRES_PASSWORD: "${DB_PASSWORD:?falta DB_PASSWORD en .env}"
+      # El script 99-rol-aplicacion.sh crea sirve_app con esta clave. Sin ella
+      # el script aborta, el rol no existe y la aplicación no puede conectar:
+      # «password authentication failed for user sirve_app».
+      DB_APP_USER:       "${DB_APP_USER:-sirve_app}"
+      DB_PASSWORD_APP:   "${DB_PASSWORD_APP:?falta DB_PASSWORD_APP: es la clave de sirve_app}"
     volumes:
       - datos_sirve:/var/lib/postgresql/data
       # Los scripts se ejecutan SOLO la primera vez que se crea el volumen,
