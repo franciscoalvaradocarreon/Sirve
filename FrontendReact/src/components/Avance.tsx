@@ -245,7 +245,11 @@ export function Avance() {
             {!cargando && resumen && resumen.filas.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-4 py-6 text-center text-texto-tenue">
-                  Esta elección no tiene casillas declaradas.
+                  {agrupacion === 'municipio'
+                    ? 'Esta elección no tiene casillas declaradas.'
+                    : `Este proceso no tiene ${AGRUPACIONES.find(
+                        (a) => a.valor === agrupacion,
+                      )?.etiqueta.toLowerCase()} asignados a sus secciones.`}
                 </td>
               </tr>
             )}
