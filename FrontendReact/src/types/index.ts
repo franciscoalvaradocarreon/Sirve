@@ -127,3 +127,23 @@ export interface ErrorContrato {
   mensaje: string
   detalle?: string
 }
+
+/** Una fila del reporte de avance: un municipio o un distrito. */
+export interface AvanceFila {
+  id: number
+  clave: string
+  nombre: string
+  casillas: number
+  capturadas: number
+}
+
+/** Reporte de avance de una elección, con sus totales. */
+export interface AvanceResumen {
+  agrupacion: string
+  casillas: number
+  capturadas: number
+  filas: AvanceFila[]
+}
+
+/** Cómo se agrupa el reporte de avance. */
+export type AgrupacionAvance = 'municipio' | 'distrito_local' | 'distrito_federal'

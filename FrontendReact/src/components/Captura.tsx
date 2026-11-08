@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { Check, RotateCcw, Save } from 'lucide-react'
 import { casillaServicio } from '../api/casillaServicio'
 import { capturaServicio } from '../api/capturaServicio'
+import { nuevoUuid } from '../utils/uuid'
 import { eleccionServicio } from '../api/eleccionServicio'
 import { municipioServicio } from '../api/municipioServicio'
 import { procesoServicio } from '../api/procesoServicio'
@@ -236,7 +237,7 @@ export function Captura() {
     setGuardando(true)
     try {
       const resultado = await capturaServicio.guardar({
-        id_cliente: crypto.randomUUID(),
+        id_cliente: nuevoUuid(),
         id_casilla: casilla.id,
         id_eleccion: idEleccion,
         total_acta: total,

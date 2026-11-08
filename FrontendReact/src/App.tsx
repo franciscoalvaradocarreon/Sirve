@@ -8,6 +8,7 @@ import { Secciones } from './components/Secciones'
 import { Casillas } from './components/Casillas'
 import { Elecciones } from './components/Elecciones'
 import { Captura } from './components/Captura'
+import { Avance } from './components/Avance'
 import { EnConstruccion } from './components/EnConstruccion'
 import { TemaProveedor } from './context/TemaContext'
 
@@ -26,7 +27,7 @@ export default function App() {
             <Route path="/catalogos/casillas" element={<Casillas />} />
             <Route path="/captura" element={<Captura />} />
             <Route path="/captura/consulta" element={<EnConstruccion titulo="Consultar captura" />} />
-            <Route path="/reportes/avance" element={<EnConstruccion titulo="Avance" />} />
+            <Route path="/reportes/avance" element={<Avance />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>
