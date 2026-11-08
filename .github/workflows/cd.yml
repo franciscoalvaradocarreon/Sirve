@@ -3,37 +3,47 @@ name: Desplegar
 # Manual, a propósito: el despliegue no se dispara solo al empujar código.
 # Se elige la versión y se ejecuta desde la pestaña Actions.
 #
-# Antes de usarlo hay que configurar cuatro secretos en el repositorio
-# (Settings → Secrets and variables → Actions):
+# POR QUÉ NO SE PUBLICA UNA IMAGEN
 #
-#   SSH_HOST     dirección del servidor
-#   SSH_USER     usuario con el que se entra
-#   SSH_KEY      clave privada completa, incluido el -----BEGIN…
-#   RUTA_DESPLIEGUE   carpeta donde vive el docker-compose.yml, por ejemplo
-#                     /opt/sirve-p
+# El servidor es un Ampere de Oracle (aarch64) y los ejecutores de GitHub son
+# amd64. Se probó a construir para las dos arquitecturas con QEMU y el paso
+# emulado llevaba más de dos horas sin terminar: emular un Maven y un Node
+# completos no es viable. En el servidor, en cambio, la misma construcción
+# tarda dos minutos porque es ARM nativo.
 #
-# Y una vez en el servidor:
-#   docker network create proxy
-#   (el bloque Caddyfile.sitio, añadido al Caddy del SIH)
+# Así que el despliegue copia el código y construye allí. La imagen queda
+# etiquetada con la versión, lo que permite volver a una anterior.
+#
+# Secretos necesarios (Settings → Secrets and variables → Actions):
+#
+#   SSH_HOST          dirección del servidor
+#   SSH_USER          usuario
+#   SSH_KEY           clave privada completa, con el -----BEGIN…
+#   RUTA_DESPLIEGUE   carpeta del compose, por ejemplo /opt/sirve-p
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Versión ya publicada (por ejemplo 1.0.0 o sha-abc1234)'
+        description: 'Etiqueta o rama a desplegar (v1.0.2, main…)'
         required: true
         type: string
+        default: main
 
 permissions:
   contents: read
-  packages: read
 
 jobs:
 
   desplegar:
-    name: Desplegar en el servidor
+    name: Construir y desplegar en el servidor
     runs-on: ubuntu-latest
     environment: produccion
     steps:
+      - name: Traer la versión pedida
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version }}
+
       - name: Preparar la clave SSH
         run: |
           mkdir -p ~/.ssh
@@ -41,24 +51,41 @@ jobs:
           chmod 600 ~/.ssh/id_deploy
           ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
 
-      - name: Desplegar
+      - name: Empaquetar el código
         run: |
+          # git archive deja fuera lo ignorado: node_modules, target, db/ y .env
+          # no viajan, y en el servidor se conservan los que ya están.
+          git archive --format=tar -o /tmp/sirve-src.tar HEAD
+          ls -lh /tmp/sirve-src.tar
+
+      - name: Copiar y construir
+        run: |
+          scp -i ~/.ssh/id_deploy /tmp/sirve-src.tar \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/sirve-src.tar"
+
           ssh -i ~/.ssh/id_deploy "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
             "set -e
              cd '${{ secrets.RUTA_DESPLIEGUE }}'
-             echo 'Actualizando la imagen…'
-             IMAGEN_APP='ghcr.io/\${{ github.repository }}:${{ inputs.version }}' docker compose pull app
-             IMAGEN_APP='ghcr.io/\${{ github.repository }}:${{ inputs.version }}' docker compose up -d --no-build app
-             echo 'Esperando a que responda…'
-             for i in \$(seq 1 30); do
-               if docker compose exec -T app curl -fsS http://127.0.0.1:8080/actuator/health > /dev/null 2>&1; then
+             tar -x -f /tmp/sirve-src.tar
+             rm -f /tmp/sirve-src.tar
+             echo 'Construyendo sirve-p:${{ inputs.version }}…'
+             IMAGEN_APP='sirve-p:${{ inputs.version }}' sudo -n docker compose build app
+             IMAGEN_APP='sirve-p:${{ inputs.version }}' sudo -n docker compose up -d --no-build app
+            "
+
+      - name: Verificar que responde
+        run: |
+          ssh -i ~/.ssh/id_deploy "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "for i in \$(seq 1 30); do
+               if curl -fsS http://127.0.0.1:8088/actuator/health/liveness > /dev/null 2>&1; then
                  echo 'La aplicación responde.'
+                 curl -s http://127.0.0.1:8088/api/procesos | head -c 200
                  exit 0
                fi
-               sleep 2
+               sleep 3
              done
-             echo 'La aplicación no respondió; se revierte al estado anterior.'
-             docker compose logs --tail 40 app
+             echo 'No respondió; últimas líneas del registro:'
+             cd '${{ secrets.RUTA_DESPLIEGUE }}' && sudo -n docker compose logs --tail 30 app
              exit 1
             "
 
@@ -66,9 +93,11 @@ jobs:
         if: always()
         run: |
           {
-            echo "## Despliegue de la versión ${{ inputs.version }}"
+            echo "## Despliegue de ${{ inputs.version }}"
             echo ""
             echo "Servidor: \`${{ secrets.SSH_HOST }}\`"
             echo ""
-            echo "Resultado: ${{ job.status }}"
+            echo "Resultado: **${{ job.status }}**"
+            echo ""
+            echo "Imagen construida: \`sirve-p:${{ inputs.version }}\`"
           } >> "$GITHUB_STEP_SUMMARY"

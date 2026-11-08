@@ -7,7 +7,7 @@
  */
 export const COLOR_PRIMARIO = '#2fb9a3' // menta
 
-export const NOMBRE_SISTEMA = 'SIRVE-P'
+export const NOMBRE_SISTEMA = 'SIRVE'
 
 export const DESCRIPCION_SISTEMA = 'Captura de resultados'
 
