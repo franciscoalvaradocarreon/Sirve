@@ -22,20 +22,86 @@ de cargar datos reales conviene el dominio.
 | Credencial para descargar la imagen | tú: un token de GitHub con `read:packages` |
 | Acceso SSH al servidor | tú |
 
-### El puerto, en dos lugares
+### El puerto 8088, en dos lugares
 
-Oracle tiene dos cortafuegos y hay que abrir el 8088 en los dos. Es el error más
-común del primer despliegue: el contenedor arriba, Caddy bien, y el navegador
-sin respuesta.
+Oracle tiene dos cortafuegos y hay que abrir el puerto en los dos. Abrir solo
+uno es el error más común del primer despliegue: el contenedor arriba, Caddy
+bien, y el navegador sin respuesta.
 
-1. **Lista de seguridad de la instancia** (consola de Oracle): regla de ingreso,
-   TCP, puerto 8088, origen `0.0.0.0/0`.
-2. **Dentro del servidor**:
+#### 1. Lista de seguridad de Oracle (obligatorio)
+
+En la consola de Oracle Cloud:
+
+1. *Compute* → *Instances* → tu instancia → pestaña **Networking**
+2. Clic en la **subred** (VNIC)
+3. **Security Lists** → la lista por defecto → **Add Ingress Rules**
+
+```
+Stateless      No
+Source Type    CIDR
+Source         0.0.0.0/0
+IP Protocol    TCP
+Source Port    All
+Destination Port Range   8088
+Description    SIRVE-P
+```
+
+Sin esto, nada de lo que hagas dentro del servidor se ve desde fuera.
+
+Si la instancia usa **Network Security Groups** en vez de listas de seguridad,
+la regla va ahí, con el mismo contenido.
+
+#### 2. Cortafuegos del servidor
+
+Primero hay que saber cuál está activo:
+
+```bash
+sudo systemctl is-active firewalld
+sudo iptables -L INPUT -n --line-numbers | head -20
+```
+
+**Si `firewalld` está activo** (lo habitual en Oracle Linux 8 y 9):
+
+```bash
+sudo firewall-cmd --permanent --add-port=8088/tcp
+sudo firewall-cmd --reload
+sudo firewall-cmd --list-ports          # debe aparecer 8088/tcp
+```
+
+**Si no hay firewalld y se usan reglas de iptables:**
 
 ```bash
 sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 8088 -j ACCEPT
-sudo netfilter-persistent save      # para que sobreviva al reinicio
+sudo netfilter-persistent save          # Debian/Ubuntu
+# o bien
+sudo service iptables save              # Oracle Linux / RHEL
 ```
+
+El número `6` de la regla es la posición. Debe quedar **antes** de la regla de
+rechazo final; si tu `INPUT` tiene otra estructura, mira la numeración y ajusta.
+
+#### 3. Comprobar
+
+Desde el servidor, que Caddy escuche:
+
+```bash
+sudo ss -tlnp | grep 8088
+```
+
+Desde tu máquina, que responda:
+
+```powershell
+curl.exe -i http://140.84.191.170:8088/actuator/health
+```
+
+Y para descartar que sea el puerto y no la aplicación:
+
+```powershell
+Test-NetConnection -ComputerName 140.84.191.170 -Port 8088
+```
+
+`TcpTestSucceeded : False` con el contenedor arriba casi siempre significa que
+falta una de las dos reglas.
 
 ### La imagen es privada
 
