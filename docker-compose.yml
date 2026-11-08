@@ -1,0 +1,111 @@
+# ============================================================================
+# SIRVE-P · PostgreSQL + aplicación
+#
+# Proyecto de compose independiente del SIH: aunque vivan en la misma
+# máquina, un "docker compose up" de uno no recrea los contenedores del otro.
+#
+# Caddy NO va aquí: el servidor ya tiene uno escuchando en 80/443 para el
+# SIH, y solo puede haber uno. A este contenedor se le alcanza por la red
+# externa "proxy", y el sitio se declara en el Caddyfile del SIH.
+#
+# Uso local:
+#     docker compose up -d --build
+#     http://localhost:9081
+# ============================================================================
+
+name: sirve-p
+
+x-registros: &registros
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+
+  # --------------------------------------------------------------------------
+  # PostgreSQL 17 con la base de SIRVE
+  # --------------------------------------------------------------------------
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    logging: *registros
+    environment:
+      POSTGRES_DB:       "${DB_NAME:-SIRVE}"
+      POSTGRES_USER:     "${DB_ADMIN_USER:-User_app}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD:?falta DB_PASSWORD en .env}"
+    volumes:
+      - datos_sirve:/var/lib/postgresql/data
+      # Los scripts se ejecutan SOLO la primera vez que se crea el volumen,
+      # en orden alfabético. El 00 crea el esquema completo; los demás cargan
+      # catálogos. Con el volumen ya creado se ignoran.
+      - ./db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_ADMIN_USER:-User_app} -d ${DB_NAME:-SIRVE}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    networks:
+      - interna
+
+  # --------------------------------------------------------------------------
+  # Aplicación: API + front servido del mismo origen
+  # --------------------------------------------------------------------------
+  app:
+    image: "${IMAGEN_APP:-sirve-p:local}"
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    logging: *registros
+
+    # La JVM calcula su heap con MaxRAMPercentage=75 (ver Dockerfile). Sin
+    # límite vería toda la RAM del servidor y competiría con la base del SIH.
+    mem_limit: 1g
+
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # El rol de la aplicación: lee y escribe datos, no altera el esquema.
+      DB_URL:      "jdbc:postgresql://db:5432/${DB_NAME:-SIRVE}"
+      DB_USER:     "${DB_APP_USER:-sirve_app}"
+      DB_PASSWORD: "${DB_PASSWORD_APP:?falta DB_PASSWORD_APP: es la clave de sirve_app}"
+      TZ:          "America/Mexico_City"
+    networks:
+      - interna
+      - proxy
+
+  # --------------------------------------------------------------------------
+  # Caddy SOLO para desarrollo local: en el servidor se usa el del SIH.
+  # Se activa con el perfil "local":
+  #     docker compose --profile local up -d
+  # --------------------------------------------------------------------------
+  caddy:
+    image: caddy:2-alpine
+    profiles: ["local"]
+    restart: unless-stopped
+    logging: *registros
+    depends_on:
+      - app
+    ports:
+      - "${PUERTO_HTTP:-9081}:80"
+    environment:
+      SITIO: ":80"
+    volumes:
+      - ./Caddyfile.local:/etc/caddy/Caddyfile:ro
+    networks:
+      - proxy
+
+volumes:
+  datos_sirve:
+
+networks:
+  # Red privada entre la base y la aplicación. Nada de esto ve Internet.
+  interna:
+    internal: true
+  # Red compartida con el Caddy del servidor. Debe existir antes:
+  #     docker network create proxy
+  proxy:
+    external: true

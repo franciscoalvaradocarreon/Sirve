@@ -1,0 +1,70 @@
+# ============================================================================
+# SIRVE-P · configuración
+#
+# En producción todo entra por variables de entorno (docker-compose.yml).
+# En local, si no defines DB_PASSWORD, hay que exportarla antes de arrancar:
+#
+#     $env:DB_PASSWORD = "..."   (PowerShell)
+#     export DB_PASSWORD=...     (bash)
+# ============================================================================
+
+server:
+  port: ${PUERTO:8081}
+  # Detrás de Caddy: que respete el esquema y el host originales
+  forward-headers-strategy: framework
+
+spring:
+  application:
+    name: sirve-p
+
+  # Clave de la base para desarrollo local, sin exportar variables ni tocar
+  # la configuración del IDE: basta crear «application-local.yml» junto al
+  # pom.xml con la clave. Ese archivo no se versiona.
+  # Se buscan dos ubicaciones y las dos son opcionales, para que funcione
+  # igual desde NetBeans, desde Maven o con java -jar, sin depender de cuál
+  # sea el directorio de trabajo:
+  #   file:      ./application-local.yml  junto al pom
+  #   classpath: dentro de resources    (alternativa, también ignorada por git)
+  config:
+    import:
+      - optional:file:./application-local.yml
+      - optional:classpath:application-local.yml
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://127.0.0.1:5432/SIRVE}
+    username: ${DB_USER:User_app}
+    password: ${DB_PASSWORD:}
+    hikari:
+      # El esquema va en el search_path de todas las conexiones
+      connection-init-sql: SET search_path TO sirve, public
+      maximum-pool-size: ${DB_POOL:10}
+      # Si la base no responde, fallar rápido: la app debe seguir viva
+      connection-timeout: 5000
+
+  # Nota: Jackson 3 (el de Spring Boot 4) serializa java.time en ISO-8601 por
+  # omisión. La opción write-dates-as-timestamps ya no existe y, si se declara,
+  # el arranque falla al no poder enlazarla.
+  #
+  # Los DTO son records con nombres en camelCase; el JSON que se publica va en
+  # snake_case, que es lo que dice el contrato. La traducción la hace Jackson.
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+
+app:
+  cors:
+    # En desarrollo, Vite. En producción el front va dentro del WAR (mismo origen).
+    origenes: ${CORS_ORIGENES:http://localhost:5173}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  level:
+    mx.sirve: INFO

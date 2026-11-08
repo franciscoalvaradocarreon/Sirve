@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.1.0</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>mx.sirve</groupId>
+    <artifactId>sirve</artifactId>
+    <version>1.0</version>
+    <packaging>jar</packaging>
+    <name>SIRVE</name>
+    <description>Captura de resultados electorales</description>
+
+    <properties>
+        <java.version>21</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+        <!-- API REST: los controladores y Jackson -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- Acceso a datos: JdbcTemplate y el pool de conexiones -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+
+        <!-- Validación de los cuerpos de petición -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- Control de salud para el compose y el monitor -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Tomcat embebido: va dentro del jar, sin servidor externo.
+             No se declara "provided" porque el proyecto no se despliega en un
+             contenedor de aplicaciones: se ejecuta solo, con java -jar o desde
+             el IDE. Con provided, NetBeans y mvn exec:java fallan con
+             ClassNotFoundException: jakarta.servlet.ServletException. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-tomcat</artifactId>
+        </dependency>
+    </dependencies>
+
+    <!--
+      Se empaqueta como jar y no como war a propósito: es una aplicación que
+      arranca sola (Tomcat embebido), no un artefacto para desplegar en un
+      servidor de aplicaciones. Un war obliga al IDE a pedir un servidor y
+      deshabilita "Run".
+
+      Cómo se ejecuta:
+
+        NetBeans                             Run File sobre SirveApplication
+        mvn spring-boot:run                  línea de comandos
+        java -jar target/sirve.jar           el artefacto
+        docker compose up -d (construyendo)  producción
+    -->
+    <build>
+        <finalName>sirve</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

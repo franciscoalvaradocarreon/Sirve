@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+/* El modo oscuro se activa con la clase .dark en <html>, no con la preferencia
+   del sistema: el usuario manda y su elección se guarda en localStorage. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ============================================================================
+   Tema
+   ----------------------------------------------------------------------------
+   --primario lo escribe src/tema.ts al arrancar. Aquí solo se declara el
+   respaldo y se derivan las variantes: cambiar una sola variable recompone
+   toda la gama sin tocar clases.
+   ============================================================================ */
+:root {
+  --primario: #2fb9a3;
+
+  --primario-suave: color-mix(in oklab, var(--primario) 10%, white);
+  --primario-borde: color-mix(in oklab, var(--primario) 35%, white);
+  --primario-texto: color-mix(in oklab, var(--primario) 75%, black);
+
+  --fondo: #ffffff;
+  --fondo-alt: #f3f6f5;
+  --superficie: #ffffff;
+  /* Bordes: con #e6e8e8 no se distinguían del blanco. Este tono sí marca
+     la separación sin llegar a verse duro. */
+  --borde: #d2dad8;
+  --borde-tenue: #e8edec;
+  --texto: #17201f;
+  --texto-tenue: #5f6b69;
+}
+
+.dark {
+  --primario-suave: color-mix(in oklab, var(--primario) 18%, #0d1413);
+  --primario-borde: color-mix(in oklab, var(--primario) 45%, #0d1413);
+  --primario-texto: color-mix(in oklab, var(--primario) 85%, white);
+
+  --fondo: #0d1211;
+  --fondo-alt: #111817;
+  --superficie: #131b1a;
+  --borde: #2c3d3a;
+  --borde-tenue: #1d2a28;
+  --texto: #e8f0ee;
+  --texto-tenue: #93a3a0;
+}
+
+@theme inline {
+  --color-primario: var(--primario);
+  --color-primario-suave: var(--primario-suave);
+  --color-primario-borde: var(--primario-borde);
+  --color-primario-texto: var(--primario-texto);
+
+  --color-fondo: var(--fondo);
+  --color-fondo-alt: var(--fondo-alt);
+  --color-superficie: var(--superficie);
+  --color-borde: var(--borde);
+  --color-borde-tenue: var(--borde-tenue);
+  --color-texto: var(--texto);
+  --color-texto-tenue: var(--texto-tenue);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--fondo);
+  color: var(--texto);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Barra de desplazamiento discreta, acorde al modo */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--borde) transparent;
+}

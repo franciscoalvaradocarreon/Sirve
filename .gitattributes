@@ -1,0 +1,36 @@
+# ============================================================================
+# SIRVE-P · Finales de línea y binarios
+#
+# Sin esto, Git convierte los finales de línea a CRLF en Windows y el script
+# de inicialización de la base (.sh) deja de funcionar dentro del contenedor
+# de Linux: bash lo lee como un solo comando con un \r al final.
+# ============================================================================
+
+# Por omisión: texto con LF, que es lo que entiende Linux
+* text=auto eol=lf
+
+# Scripts que corren en Linux: siempre LF
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+
+# Scripts de Windows: siempre CRLF
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binarios: que Git no intente convertirlos ni mostrarlos como texto
+*.png  binary
+*.jpg  binary
+*.ico  binary
+*.jar  binary
+*.war  binary
+*.pdf  binary
+*.shp  binary
+*.dbf  binary
+*.shx  binary
+*.zip  binary
+
+# Los archivos de datos que se exporten marcados como tales
+*.csv  text

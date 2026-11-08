@@ -1,0 +1,67 @@
+# ============================================================================
+# SIRVE-P · Lo que NO va al repositorio
+#
+# Regla general: aquí solo entra código. Ni credenciales, ni datos, ni
+# artefactos de compilación.
+#
+# OJO: este archivo debe tener finales de línea LF. Con CRLF, Git toma el
+# \r como parte del patrón y las reglas dejan de funcionar en silencio.
+# ============================================================================
+
+# --- Credenciales -----------------------------------------------------------
+.env
+.env.local
+*.env.local
+application-local.yml
+**/application-local.yml
+**/application-local.properties
+
+# --- Datos y respaldos ------------------------------------------------------
+# La carpeta 2021 tiene 7 GB de respaldos de SQL Server y la lista nominal
+# con datos personales de 3.9 millones de personas. No entra aquí.
+2021/
+*.bak
+*.dump
+*.backup
+
+# Volcados y exportaciones de datos
+*.csv
+*.xlsx
+*.xls
+
+# --- Capas SIG --------------------------------------------------------------
+# 88 MB de shapefiles del INE. Son datos binarios, no código: se descargan
+# aparte. El generador generar-2027-oficial.py los lee de esta ruta.
+docs/19 NUEVO LEON/
+
+# --- Java / Maven -----------------------------------------------------------
+**/target/
+*.class
+*.jar
+*.war
+!**/maven-wrapper.jar
+
+# --- Node / React -----------------------------------------------------------
+**/node_modules/
+**/dist/
+**/.vite/
+*.local
+
+# --- IDE --------------------------------------------------------------------
+.idea/
+*.iml
+.vscode/
+nbproject/private/
+nbbuild/
+nbdist/
+build/
+out/
+
+# --- Clústeres de prueba de PostgreSQL --------------------------------------
+.pg*/
+pgdata/
+
+# --- Sistema operativo ------------------------------------------------------
+Thumbs.db
+Desktop.ini
+.DS_Store

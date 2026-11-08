@@ -1,0 +1,26 @@
+# ============================================================================
+# Bloque para pegar en el Caddyfile del SIH (el que ya corre en el servidor).
+#
+# Requisitos previos, una sola vez:
+#   1. docker network create proxy
+#   2. En el compose del SIH, agregar la red externa "proxy" al servicio caddy
+#      y al de la app no hace falta: solo el caddy la necesita para alcanzar
+#      los contenedores de SIRVE.
+#
+# El contenedor de SIRVE se llama sirve-p-app-1 (proyecto sirve-p, servicio
+# app) y escucha en el 8080 dentro de la red.
+# ============================================================================
+
+sirve.tudominio.mx {
+	encode gzip zstd
+
+	# Cabeceras de seguridad mínimas. El front es una SPA, así que las rutas
+	# que no son /api se resuelven con index.html.
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options SAMEORIGIN
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+
+	reverse_proxy sirve-p-app-1:8080
+}

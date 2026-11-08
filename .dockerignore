@@ -1,0 +1,11 @@
+**/node_modules
+**/dist
+**/target
+.git
+.env
+.env.local
+*.md
+# Credenciales locales: nunca deben viajar dentro de la imagen
+**/application-local.yml
+**/application-local.properties
+
