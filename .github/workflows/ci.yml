@@ -114,11 +114,14 @@ jobs:
       - name: Comprobar que el jar arranca
         run: |
           # Sin base de datos la aplicación arranca igual: la conexión se abre
-          # en la primera consulta, no al inicio. Lo que se verifica aquí es
-          # que el artefacto sea ejecutable y que Tomcat levante.
+          # en la primera consulta, no al inicio.
+          #
+          # Se consulta /liveness y no /health a propósito: /health incluye la
+          # verificación de la base y aquí no hay base, así que responde 503 y
+          # haría fallar la prueba por algo que no se está probando.
           nohup java -jar target/sirve.jar --server.port=8099 > /tmp/app.log 2>&1 &
           for i in $(seq 1 40); do
-            if curl -fsS http://127.0.0.1:8099/actuator/health > /dev/null 2>&1; then
+            if curl -fsS http://127.0.0.1:8099/actuator/health/liveness > /dev/null 2>&1; then
               echo "La aplicación arrancó y responde."
               exit 0
             fi
@@ -211,7 +214,7 @@ jobs:
         run: |
           docker run -d --name prueba -e DB_PASSWORD=x -p 8098:8080 sirve-p:ci
           for i in $(seq 1 40); do
-            if curl -fsS http://127.0.0.1:8098/actuator/health > /dev/null 2>&1; then
+            if curl -fsS http://127.0.0.1:8098/actuator/health/liveness > /dev/null 2>&1; then
               echo "La imagen arranca y responde."
               docker rm -f prueba > /dev/null
               exit 0
