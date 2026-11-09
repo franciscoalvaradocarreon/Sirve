@@ -10,6 +10,9 @@ import { Elecciones } from './components/Elecciones'
 import { Captura } from './components/Captura'
 import { Avance } from './components/Avance'
 import { EnConstruccion } from './components/EnConstruccion'
+import { MovilLayout } from './movil/MovilLayout'
+import { MovilCaptura } from './movil/MovilCaptura'
+import { MovilPendientes } from './movil/MovilPendientes'
 import { TemaProveedor } from './context/TemaContext'
 
 export default function App() {
@@ -17,6 +20,7 @@ export default function App() {
     <TemaProveedor>
       <BrowserRouter>
         <Routes>
+          {/* Escritorio: menú lateral */}
           <Route element={<Layout />}>
             <Route index element={<Inicio />} />
             <Route path="/catalogos/procesos" element={<Procesos />} />
@@ -28,8 +32,16 @@ export default function App() {
             <Route path="/captura" element={<Captura />} />
             <Route path="/captura/consulta" element={<EnConstruccion titulo="Consultar captura" />} />
             <Route path="/reportes/avance" element={<Avance />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
+
+          {/* Teléfono y tableta: árbol propio, sin menú lateral, con
+              navegación inferior. Las pantallas de escritorio no se tocan. */}
+          <Route path="/movil" element={<MovilLayout />}>
+            <Route index element={<MovilCaptura />} />
+            <Route path="pendientes" element={<MovilPendientes />} />
+          </Route>
+
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     </TemaProveedor>

@@ -1,0 +1,33 @@
+{
+  "name": "SIRVE · Captura de resultados",
+  "short_name": "SIRVE",
+  "description": "Captura de resultados electorales por casilla. Funciona sin conexión.",
+  "start_url": "/movil",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#2fb9a3",
+  "lang": "es-MX",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/icono-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icono-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icono-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

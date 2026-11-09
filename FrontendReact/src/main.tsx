@@ -13,3 +13,20 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 )
+
+/*
+ * Service worker: deja la aplicación disponible sin conexión.
+ *
+ * Solo en producción. En desarrollo estorba: guarda en caché los módulos de
+ * Vite y los cambios dejan de verse hasta limpiar el almacenamiento a mano.
+ *
+ * No se espera a que esté listo: la primera carga funciona igual y a partir de
+ * la segunda ya abre sin red.
+ */
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      // Sin service worker la aplicación funciona, solo que no sin conexión.
+    })
+  })
+}

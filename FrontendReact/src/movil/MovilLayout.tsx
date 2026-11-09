@@ -1,0 +1,98 @@
+import { useEffect, useState } from 'react'
+import { NavLink, Outlet } from 'react-router-dom'
+import { ClipboardCheck, CloudOff, ListChecks } from 'lucide-react'
+import { cola } from '../utils/cola'
+import { NOMBRE_SISTEMA } from '../utils/tema'
+
+/**
+ * Armazón de las pantallas móviles.
+ *
+ * Es un árbol aparte del de escritorio: barra arriba, navegación abajo y nada
+ * de menú lateral. Las pantallas de escritorio no se tocan.
+ *
+ * La barra superior avisa cuando no hay conexión y cuántas capturas esperan,
+ * porque es el dato que importa en la casilla: si el aviso está en verde, todo
+ * se envió; si no, queda algo en el teléfono.
+ */
+export function MovilLayout() {
+  const [enLinea, setEnLinea] = useState(navigator.onLine)
+  const [pendientes, setPendientes] = useState(0)
+
+  useEffect(() => {
+    const alCambiar = () => setEnLinea(navigator.onLine)
+    window.addEventListener('online', alCambiar)
+    window.addEventListener('offline', alCambiar)
+    return () => {
+      window.removeEventListener('online', alCambiar)
+      window.removeEventListener('offline', alCambiar)
+    }
+  }, [])
+
+  useEffect(() => {
+    let vigente = true
+    const revisar = () => {
+      cola
+        .contar()
+        .then((n) => {
+          if (vigente) setPendientes(n)
+        })
+        .catch(() => {})
+    }
+    revisar()
+    const temporizador = window.setInterval(revisar, 5000)
+    return () => {
+      vigente = false
+      window.clearInterval(temporizador)
+    }
+  }, [])
+
+  const claseTab = ({ isActive }: { isActive: boolean }) =>
+    `flex flex-1 flex-col items-center gap-1 py-2 text-xs transition-colors ${
+      isActive ? 'text-primario' : 'text-texto-tenue'
+    }`
+
+  return (
+    <div className="flex min-h-dvh flex-col bg-fondo">
+      <header className="sticky top-0 z-10 border-b border-borde bg-superficie/95 backdrop-blur">
+        <div className="flex items-center justify-between px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold text-texto">{NOMBRE_SISTEMA}</p>
+            <p className="text-xs text-texto-tenue">Captura en casilla</p>
+          </div>
+
+          {enLinea ? (
+            <span
+              className={`rounded-full px-2.5 py-1 text-xs ${
+                pendientes === 0
+                  ? 'bg-primario/10 text-primario'
+                  : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+              }`}
+            >
+              {pendientes === 0 ? 'Al día' : `${pendientes} por enviar`}
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-1 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+              <CloudOff size={13} />
+              Sin conexión
+            </span>
+          )}
+        </div>
+      </header>
+
+      <main className="flex-1 overflow-y-auto">
+        <Outlet />
+      </main>
+
+      <nav className="sticky bottom-0 flex border-t border-borde bg-superficie pb-[env(safe-area-inset-bottom)]">
+        <NavLink to="/movil" end className={claseTab}>
+          <ClipboardCheck size={20} />
+          Capturar
+        </NavLink>
+        <NavLink to="/movil/pendientes" className={claseTab}>
+          <ListChecks size={20} />
+          Pendientes{pendientes > 0 ? ` (${pendientes})` : ''}
+        </NavLink>
+      </nav>
+    </div>
+  )
+}

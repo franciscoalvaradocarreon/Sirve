@@ -152,7 +152,22 @@ POST /api/capturas
 
 ## Pantallas
 
+La aplicación tiene **dos entradas**: escritorio y móvil. El árbol móvil es
+independiente —sin menú lateral, con navegación inferior— y no comparte
+pantallas con el de escritorio.
+
 ```
+Móvil · /movil
+├── Capturar      selección en una columna, boleta con campos grandes
+└── Pendientes    capturas guardadas en el teléfono esperando señal
+```
+
+Es una aplicación instalable (PWA): se agrega a la pantalla de inicio desde el
+navegador, abre sin conexión y guarda las capturas en el teléfono cuando no hay
+señal, para enviarlas al volver la red.
+
+```
+Escritorio
 Catálogos
 ├── Procesos
 ├── Elecciones      con casillas, boleta y avance
