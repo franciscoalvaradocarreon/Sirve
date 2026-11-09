@@ -58,6 +58,7 @@ export function MovilCaptura() {
   const claveSeccion = parametros.get('seccion') ?? ''
   const idCasilla = Number(parametros.get('id_casilla')) || null
 
+  const proceso = procesos.find((p) => p.id === idProceso) ?? null
   const casilla = casillas.find((c) => c.id === idCasilla) ?? null
   const eleccion = elecciones.find((e) => e.id === idEleccion) ?? null
 
@@ -324,22 +325,18 @@ export function MovilCaptura() {
           </div>
         )}
 
-        {/* Selección: una columna, campos grandes */}
+        {/* Selección: una columna, campos grandes.
+
+            El proceso no se elige: se toma el vigente. Quien captura en una
+            casilla no tiene por qué escogerlo, y un desplegable de más es una
+            forma de equivocarse. Solo se muestra cuál está en uso. */}
         <div className="mb-4 space-y-3 rounded-xl border border-borde bg-superficie p-4">
-          <label className="block text-sm text-texto-tenue">
-            Proceso
-            <select
-              value={idProceso ?? ''}
-              onChange={(e) => cambiar('id_proceso', e.target.value, ['id_eleccion', 'id_municipio', 'seccion', 'id_casilla'])}
-              className={`mt-1 ${clasesCampo}`}
-            >
-              {procesos.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.anio} · {p.activo ? 'vigente' : p.estado.toLowerCase()}
-                </option>
-              ))}
-            </select>
-          </label>
+          {proceso && (
+            <p className="text-xs uppercase tracking-wide text-texto-tenue">
+              Proceso {proceso.anio}
+              {proceso.activo ? ' · vigente' : ` · ${proceso.estado.toLowerCase()}`}
+            </p>
+          )}
 
           <label className="block text-sm text-texto-tenue">
             Elección
