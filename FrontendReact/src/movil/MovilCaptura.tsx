@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { Check, CloudOff, Save, TriangleAlert } from 'lucide-react'
 import { ErrorApi } from '../api/cliente'
 import { capturaServicio } from '../api/capturaServicio'
@@ -32,7 +32,8 @@ import type {
  */
 export function MovilCaptura() {
   const [parametros, setParametros] = useSearchParams()
-  const navegar = useNavigate()
+
+  const [enLinea, setEnLinea] = useState(navigator.onLine)
 
   const [procesos, setProcesos] = useState<Proceso[]>([])
   const [elecciones, setElecciones] = useState<Eleccion[]>([])
@@ -197,12 +198,10 @@ export function MovilCaptura() {
 
   /* -------------------------------- guardar ------------------------------- */
 
-  async function guardar() {
-    if (!casilla || !idEleccion) return
-    setGuardando(true)
-    setAviso(null)
-
-    const datos = {
+  /** Arma la carga útil a partir de lo que está en pantalla. */
+  function datosDeCaptura() {
+    if (!casilla || !idEleccion) return null
+    return {
       id_cliente: nuevoUuid(),
       id_casilla: casilla.id,
       id_eleccion: idEleccion,
@@ -213,6 +212,36 @@ export function MovilCaptura() {
         .map((o) => ({ id_opcion: o.id, votos: entero(votos[o.id] ?? '') }))
         .filter((v) => v.votos > 0),
       autor_texto: null,
+    }
+  }
+
+  /** Guarda en el teléfono sin intentar enviar. */
+  async function guardarSinEnviar() {
+    const datos = datosDeCaptura()
+    if (!casilla || !datos) return
+    await cola.encolar({
+      id_cliente: datos.id_cliente,
+      creado: Date.now(),
+      casilla: `${casilla.clave} · ${casilla.municipio}`,
+      eleccion: eleccion?.nombre ?? '',
+      datos,
+      intentos: 0,
+    })
+    setAviso({
+      tipo: 'cola',
+      texto: 'Guardada en el teléfono. Se enviará al recuperar la conexión.',
+    })
+  }
+
+  async function guardar() {
+    if (!casilla || !idEleccion) return
+    setGuardando(true)
+    setAviso(null)
+
+    const datos = datosDeCaptura()
+    if (!datos) {
+      setGuardando(false)
+      return
     }
 
     try {
@@ -243,6 +272,16 @@ export function MovilCaptura() {
       setGuardando(false)
     }
   }
+
+  useEffect(() => {
+    const alCambiar = () => setEnLinea(navigator.onLine)
+    window.addEventListener('online', alCambiar)
+    window.addEventListener('offline', alCambiar)
+    return () => {
+      window.removeEventListener('online', alCambiar)
+      window.removeEventListener('offline', alCambiar)
+    }
+  }, [])
 
   const reiniciar = () => {
     const mapa: Record<number, string> = {}
@@ -468,13 +507,19 @@ export function MovilCaptura() {
               <Save size={18} />
               {guardando ? 'Guardando…' : 'Guardar'}
             </button>
-            <button
-              onClick={() => navegar('/movil/pendientes')}
-              className="rounded-lg border border-borde px-4 py-3 text-sm text-texto-tenue"
-              title="Capturas pendientes"
-            >
-              Pendientes
-            </button>
+
+            {/* Solo sin conexión, y solo para guardar en el teléfono.
+                Antes este botón llevaba a «Pendientes» y se llevaba lo
+                capturado: la pantalla se desmontaba y no quedaba nada. */}
+            {!enLinea && (
+              <button
+                onClick={() => void guardarSinEnviar()}
+                className="flex items-center justify-center gap-2 rounded-lg border border-borde px-4 py-3 text-sm text-texto-tenue"
+              >
+                <CloudOff size={16} />
+                Sin enviar
+              </button>
+            )}
           </div>
         </div>
       )}
