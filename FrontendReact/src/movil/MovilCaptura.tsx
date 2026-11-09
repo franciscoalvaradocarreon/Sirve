@@ -12,6 +12,12 @@ import { cola } from '../utils/cola'
 import { useProceso } from './ProcesoContext'
 import { AvisoFlotante } from './AvisoFlotante'
 import { conCache } from '../utils/cache'
+import {
+  claveBorrador,
+  guardarBorrador,
+  leerBorrador,
+  limpiarBorrador,
+} from '../utils/borrador'
 import { nuevoUuid } from '../utils/uuid'
 import type {
   Casilla,
@@ -42,7 +48,7 @@ export function MovilCaptura() {
   const [elecciones, setElecciones] = useState<Eleccion[]>([])
   const [municipios, setMunicipios] = useState<Municipio[]>([])
   const [secciones, setSecciones] = useState<Seccion[]>([])
-  const [casillas, setCasillas] = useState<Casilla[]>([])
+  const [casillasMunicipio, setCasillasMunicipio] = useState<Casilla[]>([])
   const [opciones, setOpciones] = useState<OpcionBoleta[]>([])
 
   const [votos, setVotos] = useState<Record<number, string>>({})
@@ -63,12 +69,21 @@ export function MovilCaptura() {
 
   const proceso = procesos.find((p) => p.id === idProceso) ?? null
 
+  // Las casillas de la sección elegida salen del listado del municipio que ya
+  // está en memoria; así no hace falta consultar nada al cambiar de sección.
+  const casillas = useMemo(
+    () =>
+      claveSeccion ? casillasMunicipio.filter((c) => c.seccion === claveSeccion) : [],
+    [casillasMunicipio, claveSeccion],
+  )
+
+  const casilla = casillas.find((c) => c.id === idCasilla) ?? null
+  const eleccion = elecciones.find((e) => e.id === idEleccion) ?? null
+
   // La barra superior muestra el proceso; esta pantalla es quien lo conoce.
   useEffect(() => {
     setProceso(proceso)
   }, [proceso, setProceso])
-  const casilla = casillas.find((c) => c.id === idCasilla) ?? null
-  const eleccion = elecciones.find((e) => e.id === idEleccion) ?? null
 
   const entero = (v: string) => {
     const n = Number(v)
@@ -142,23 +157,33 @@ export function MovilCaptura() {
       .catch(() => setSecciones([]))
   }, [idProceso, idMunicipio])
 
+  /*
+   * Casillas de todo el municipio, no de la sección.
+   *
+   * Antes se pedían por sección, y eso hacía imposible trabajar sin señal: la
+   * casilla elegida podía no haberse consultado nunca. Con el municipio
+   * completo —una sola petición, unos cientos de filas— queda guardado en el
+   * teléfono, y al elegir sección se filtra en memoria sin tocar la red.
+   */
   useEffect(() => {
-    if (!idEleccion || !claveSeccion) {
-      setCasillas([])
+    if (!idEleccion || !idMunicipio) {
+      setCasillasMunicipio([])
       return
     }
-    conCache(`casillas:${idEleccion}:${claveSeccion}`, () =>
-      casillaServicio.listar(idEleccion, { seccion: claveSeccion, idMunicipio: idMunicipio ?? undefined }),
+    conCache(`casillasMunicipio:${idEleccion}:${idMunicipio}`, () =>
+      casillaServicio.listar(idEleccion, { idMunicipio }),
     )
-      .then((cs) => {
-        setCasillas(cs)
-        if (cs.length > 0 && !cs.some((c) => c.id === idCasilla)) {
-          cambiar('id_casilla', String(cs[0].id))
-        }
-      })
-      .catch(() => setCasillas([]))
+      .then(setCasillasMunicipio)
+      .catch(() => setCasillasMunicipio([]))
+  }, [idEleccion, idMunicipio])
+
+
+  useEffect(() => {
+    if (casillas.length > 0 && !casillas.some((c) => c.id === idCasilla)) {
+      cambiar('id_casilla', String(casillas[0].id))
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idEleccion, claveSeccion, idMunicipio])
+  }, [casillas])
 
   useEffect(() => {
     if (!idEleccion) {
@@ -197,13 +222,42 @@ export function MovilCaptura() {
         setAviso({ tipo: 'cola', texto: 'Esta casilla ya tiene acta capturada. Al guardar se reemplaza.' })
       })
       .catch(() => {
-        // 404 es lo normal: todavía no hay captura.
+        // 404 es lo normal: todavía no hay captura. Puede haber un borrador:
+        // lo escrito antes de refrescar la pantalla o de quedarse sin batería.
+        if (!vigente) return
+        const borrador = leerBorrador(claveBorrador(idCasilla, idEleccion))
+        if (!borrador) return
+        setVotos(borrador.votos)
+        setTotalActa(borrador.totalActa)
+        setNulos(borrador.nulos)
+        setNoRegistrados(borrador.noRegistrados)
+        setAviso({ tipo: 'cola', texto: 'Se recuperó lo que llevabas escrito.' })
       })
 
     return () => {
       vigente = false
     }
   }, [idCasilla, idEleccion])
+
+  /*
+   * Borrador: se guarda conforme se escribe.
+   *
+   * Refrescar la pantalla —o que el teléfono cierre la pestaña por falta de
+   * memoria— borraba los votos ya escritos. Con esto se recuperan al volver,
+   * siempre que la captura no esté todavía en el servidor.
+   */
+  useEffect(() => {
+    if (!idCasilla || !idEleccion) return
+    const vacio =
+      Object.values(votos).every((v) => !v) &&
+      !totalActa && !nulos && !noRegistrados
+    const clave = claveBorrador(idCasilla, idEleccion)
+    if (vacio) {
+      limpiarBorrador(clave)
+      return
+    }
+    guardarBorrador(clave, { votos, totalActa, nulos, noRegistrados })
+  }, [idCasilla, idEleccion, votos, totalActa, nulos, noRegistrados])
 
   /* -------------------------------- guardar ------------------------------- */
 
@@ -255,6 +309,7 @@ export function MovilCaptura() {
 
     try {
       await capturaServicio.guardar(datos)
+      limpiarBorrador(claveBorrador(datos.id_casilla, datos.id_eleccion))
       setAviso({ tipo: 'ok', texto: `Guardada: ${casilla.clave}.` })
     } catch (e) {
       // estado 0 = no hubo respuesta: se guarda en el teléfono.
@@ -293,6 +348,7 @@ export function MovilCaptura() {
   }, [])
 
   const reiniciar = () => {
+    if (idCasilla && idEleccion) limpiarBorrador(claveBorrador(idCasilla, idEleccion))
     const mapa: Record<number, string> = {}
     opciones.forEach((o) => {
       mapa[o.id] = ''
