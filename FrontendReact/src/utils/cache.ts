@@ -39,3 +39,18 @@ export function hayCache(clave: string): boolean {
     return false
   }
 }
+
+/**
+ * Guarda a propósito, sin consultar antes al servidor.
+ *
+ * Lo usa la preparación sin conexión: se descarga el municipio entero aunque ya
+ * hubiera una copia, para que la del teléfono sea la más reciente antes de
+ * salir a la casilla.
+ */
+export function guardarCache<T>(clave: string, datos: T): void {
+  try {
+    localStorage.setItem(PREFIJO + clave, JSON.stringify(datos))
+  } catch {
+    // Sin espacio: la aplicación sigue funcionando con lo que ya tenía.
+  }
+}

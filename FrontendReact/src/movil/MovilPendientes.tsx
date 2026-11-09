@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Check, RefreshCw, Trash2, TriangleAlert } from 'lucide-react'
+import { Check, HardDrive, RefreshCw, Trash2, TriangleAlert } from 'lucide-react'
 import { ErrorApi } from '../api/cliente'
 import { capturaServicio } from '../api/capturaServicio'
 import { cola, type CapturaEnCola } from '../utils/cola'
+import { estadoAlmacenamiento, formatearBytes, pedirPersistencia } from '../utils/almacenamiento'
 
 /**
  * Capturas guardadas en el teléfono, esperando señal.
@@ -16,6 +17,7 @@ export function MovilPendientes() {
   const [filas, setFilas] = useState<CapturaEnCola[]>([])
   const [enviando, setEnviando] = useState(false)
   const [resumen, setResumen] = useState<string | null>(null)
+  const [almacen, setAlmacen] = useState<{ persistente: boolean; uso: number } | null>(null)
 
   const cargar = useCallback(() => {
     cola.listar().then(setFilas).catch(() => setFilas([]))
@@ -58,6 +60,16 @@ export function MovilPendientes() {
         : `${enviadas} enviadas, ${fallidas} con problema.`,
     )
   }, [cargar])
+
+  useEffect(() => {
+    // Si el navegador no había concedido la persistencia, se vuelve a pedir:
+    // es más probable que la conceda con la aplicación ya instalada.
+    void pedirPersistencia().then(() =>
+      estadoAlmacenamiento().then((e) =>
+        setAlmacen(e ? { persistente: e.persistente, uso: e.uso } : null),
+      ),
+    )
+  }, [])
 
   useEffect(() => {
     cargar()
@@ -107,6 +119,19 @@ export function MovilPendientes() {
         <div className="mb-4 rounded-lg border border-borde bg-superficie p-3 text-sm text-texto">
           {resumen}
         </div>
+      )}
+
+      {almacen && (
+        <p
+          className={`mb-4 flex items-center gap-1.5 text-xs ${
+            almacen.persistente ? 'text-texto-tenue' : 'text-amber-700 dark:text-amber-400'
+          }`}
+        >
+          <HardDrive size={13} className="shrink-0" />
+          {almacen.persistente
+            ? `Guardado protegido · ${formatearBytes(almacen.uso)} en este teléfono`
+            : `El teléfono podría borrar estos datos · ${formatearBytes(almacen.uso)}`}
+        </p>
       )}
 
       {filas.length === 0 ? (

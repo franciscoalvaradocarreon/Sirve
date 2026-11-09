@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { ClipboardCheck, CloudOff, ListChecks } from 'lucide-react'
+import { pedirPersistencia } from '../utils/almacenamiento'
 import { cola } from '../utils/cola'
 import { NOMBRE_SISTEMA } from '../utils/tema'
 import {
@@ -32,6 +33,13 @@ export function MovilLayout() {
     aplicarTextoGrande(nuevo)
     guardarTextoGrande(nuevo)
   }
+
+  // Al entrar se pide al navegador que no borre lo guardado: la cola de
+  // capturas sin enviar vive ahí, y perderla en una casilla sería perder
+  // trabajo hecho.
+  useEffect(() => {
+    void pedirPersistencia()
+  }, [])
 
   useEffect(() => {
     const alCambiar = () => setEnLinea(navigator.onLine)

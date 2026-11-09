@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { CloudOff, Save, TriangleAlert } from 'lucide-react'
+import { CheckCircle2, CloudOff, Download, Save, TriangleAlert } from 'lucide-react'
 import { ErrorApi } from '../api/cliente'
 import { capturaServicio } from '../api/capturaServicio'
 import { casillaServicio } from '../api/casillaServicio'
@@ -11,7 +11,7 @@ import { seccionServicio } from '../api/seccionServicio'
 import { cola } from '../utils/cola'
 import { useProceso } from './ProcesoContext'
 import { AvisoFlotante } from './AvisoFlotante'
-import { conCache } from '../utils/cache'
+import { conCache, guardarCache, hayCache } from '../utils/cache'
 import {
   claveBorrador,
   guardarBorrador,
@@ -57,6 +57,8 @@ export function MovilCaptura() {
   const [noRegistrados, setNoRegistrados] = useState('')
 
   const [guardando, setGuardando] = useState(false)
+  const [preparando, setPreparando] = useState(false)
+  const [listoSinConexion, setListoSinConexion] = useState(false)
   const [aviso, setAviso] = useState<
     { tipo: 'ok' | 'cola' | 'error'; texto: string } | null
   >(null)
@@ -165,6 +167,19 @@ export function MovilCaptura() {
    * completo —una sola petición, unos cientos de filas— queda guardado en el
    * teléfono, y al elegir sección se filtra en memoria sin tocar la red.
    */
+  // ¿Está este municipio listo para trabajarse sin señal?
+  useEffect(() => {
+    if (!idProceso || !idEleccion || !idMunicipio) {
+      setListoSinConexion(false)
+      return
+    }
+    setListoSinConexion(
+      hayCache(`secciones:${idProceso}:${idMunicipio}`) &&
+        hayCache(`casillasMunicipio:${idEleccion}:${idMunicipio}`) &&
+        hayCache(`opciones:${idEleccion}`),
+    )
+  }, [idProceso, idEleccion, idMunicipio, secciones, casillasMunicipio, opciones])
+
   useEffect(() => {
     if (!idEleccion || !idMunicipio) {
       setCasillasMunicipio([])
@@ -258,6 +273,47 @@ export function MovilCaptura() {
     }
     guardarBorrador(clave, { votos, totalActa, nulos, noRegistrados })
   }, [idCasilla, idEleccion, votos, totalActa, nulos, noRegistrados])
+
+  /* --------------------------- preparar sin red --------------------------- */
+
+  /**
+   * Descarga a propósito todo lo que hace falta para capturar en un municipio
+   * sin señal: sus secciones, sus casillas en esa elección y la boleta.
+   *
+   * No es lo mismo que la caché automática: esta sobrescribe lo guardado para
+   * que la copia del teléfono sea la más reciente antes de salir a la casilla.
+   */
+  async function preparar() {
+    if (!idProceso || !idEleccion || !idMunicipio) return
+    setPreparando(true)
+    setAviso(null)
+    try {
+      const ss = await seccionServicio.listar(idMunicipio, idProceso)
+      guardarCache(`secciones:${idProceso}:${idMunicipio}`, ss)
+
+      const cs = await casillaServicio.listar(idEleccion, { idMunicipio })
+      guardarCache(`casillasMunicipio:${idEleccion}:${idMunicipio}`, cs)
+
+      const op = await eleccionServicio.opciones(idEleccion)
+      guardarCache(`opciones:${idEleccion}`, op)
+
+      setSecciones(ss)
+      setCasillasMunicipio(cs)
+      setOpciones(op)
+      setListoSinConexion(true)
+      setAviso({
+        tipo: 'ok',
+        texto: `Listo sin conexión: ${ss.length} secciones y ${cs.length} casillas.`,
+      })
+    } catch {
+      setAviso({
+        tipo: 'error',
+        texto: 'No se pudo preparar. Hace falta conexión para descargarlo.',
+      })
+    } finally {
+      setPreparando(false)
+    }
+  }
 
   /* -------------------------------- guardar ------------------------------- */
 
@@ -461,6 +517,39 @@ export function MovilCaptura() {
             </label>
           </div>
         </div>
+
+        {/* Preparación para trabajar sin señal.
+
+            La caché automática solo guarda lo que ya se consultó. Este botón
+            descarga el municipio completo a propósito, para que el teléfono
+            esté listo antes de salir a la casilla. */}
+        {idMunicipio && idEleccion && (
+          <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-borde bg-superficie px-4 py-3">
+            <div className="min-w-0">
+              <p className="flex items-center gap-1.5 text-sm text-texto">
+                {listoSinConexion && <CheckCircle2 size={15} className="shrink-0 text-primario" />}
+                {listoSinConexion
+                  ? 'Listo para trabajar sin señal'
+                  : 'Sin descargar en este teléfono'}
+              </p>
+              <p className="mt-0.5 truncate text-xs text-texto-tenue">
+                {listoSinConexion
+                  ? `${secciones.length} secciones · ${casillasMunicipio.length} casillas`
+                  : 'Descárgalo antes de salir a la casilla.'}
+              </p>
+            </div>
+
+            <button
+              onClick={() => void preparar()}
+              disabled={preparando || !enLinea}
+              title={!enLinea ? 'Hace falta conexión para descargar' : undefined}
+              className="flex shrink-0 items-center gap-1.5 rounded-lg border border-primario px-3 py-2 text-sm font-medium text-primario disabled:opacity-40"
+            >
+              <Download size={15} />
+              {preparando ? 'Descargando…' : listoSinConexion ? 'Actualizar' : 'Preparar'}
+            </button>
+          </div>
+        )}
 
         {/* Boleta en dos columnas.
             
