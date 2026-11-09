@@ -19,6 +19,7 @@ public class SeccionRepositorio {
 
     private static final RowMapper<SeccionDTO> FILA = (rs, n) -> new SeccionDTO(
             rs.getInt("id"),
+            rs.getInt("id_municipio"),
             rs.getString("clave"),
             rs.getString("municipio"),
             rs.getInt("casillas"),
@@ -37,7 +38,8 @@ public class SeccionRepositorio {
      */
     public List<SeccionDTO> listar(Integer idMunicipio, int idProceso) {
         return jdbc.query("""
-                SELECT s.id, s.clave, m.nombre AS municipio, count(k.id) AS casillas,
+                SELECT s.id, m.id AS id_municipio, s.clave, m.nombre AS municipio,
+                       count(k.id) AS casillas,
                        dl.clave AS distrito_local,
                        df.clave AS distrito_federal
                   FROM sirve.seccion s
@@ -47,7 +49,7 @@ public class SeccionRepositorio {
                   LEFT JOIN sirve.distrito df ON df.id = s.id_distrito_federal
                  WHERE s.id_proceso = ?
                    AND (?::int IS NULL OR s.id_municipio = ?::int)
-                 GROUP BY s.id, s.clave, m.nombre, dl.clave, df.clave
+                 GROUP BY s.id, m.id, s.clave, m.nombre, dl.clave, df.clave
                  ORDER BY m.nombre, length(s.clave), s.clave
                 """, FILA, idProceso, idMunicipio, idMunicipio);
     }

@@ -44,6 +44,7 @@ export interface Distrito {
 /** Sección con su número de casillas y sus distritos. */
 export interface Seccion {
   id: number
+  id_municipio: number
   clave: string
   municipio: string
   casillas: number

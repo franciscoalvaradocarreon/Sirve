@@ -11,7 +11,8 @@ import { seccionServicio } from '../api/seccionServicio'
 import { cola } from '../utils/cola'
 import { useProceso } from './ProcesoContext'
 import { AvisoFlotante } from './AvisoFlotante'
-import { conCache, guardarCache, hayCache } from '../utils/cache'
+import { conCache } from '../utils/cache'
+import { cargarConRespaldo, guardarCatalogo, hayCatalogo, leerCatalogo } from '../utils/almacen'
 import {
   claveBorrador,
   guardarBorrador,
@@ -47,8 +48,10 @@ export function MovilCaptura() {
   const [procesos, setProcesos] = useState<Proceso[]>([])
   const [elecciones, setElecciones] = useState<Eleccion[]>([])
   const [municipios, setMunicipios] = useState<Municipio[]>([])
-  const [secciones, setSecciones] = useState<Seccion[]>([])
-  const [casillasMunicipio, setCasillasMunicipio] = useState<Casilla[]>([])
+  const [seccionesProceso, setSeccionesProceso] = useState<Seccion[]>([])
+  const [casillasEleccion, setCasillasEleccion] = useState<Casilla[]>([])
+  const [casillasSeccion, setCasillasSeccion] = useState<Casilla[]>([])
+  const [descargado, setDescargado] = useState(false)
   const [opciones, setOpciones] = useState<OpcionBoleta[]>([])
 
   const [votos, setVotos] = useState<Record<number, string>>({})
@@ -71,15 +74,6 @@ export function MovilCaptura() {
 
   const proceso = procesos.find((p) => p.id === idProceso) ?? null
 
-  // Las casillas de la sección elegida salen del listado del municipio que ya
-  // está en memoria; así no hace falta consultar nada al cambiar de sección.
-  const casillas = useMemo(
-    () =>
-      claveSeccion ? casillasMunicipio.filter((c) => c.seccion === claveSeccion) : [],
-    [casillasMunicipio, claveSeccion],
-  )
-
-  const casilla = casillas.find((c) => c.id === idCasilla) ?? null
   const eleccion = elecciones.find((e) => e.id === idEleccion) ?? null
 
   // La barra superior muestra el proceso; esta pantalla es quien lo conoce.
@@ -147,17 +141,26 @@ export function MovilCaptura() {
       .catch(() => setAviso({ tipo: 'error', texto: 'Sin datos guardados de municipios.' }))
   }, [idProceso])
 
+  // Secciones de todo el proceso, no de un municipio: son unas tres mil filas
+  // y así el teléfono queda listo para cualquier municipio sin volver a pedir.
   useEffect(() => {
-    if (!idProceso || !idMunicipio) {
-      setSecciones([])
+    if (!idProceso) {
+      setSeccionesProceso([])
       return
     }
-    conCache(`secciones:${idProceso}:${idMunicipio}`, () =>
-      seccionServicio.listar(idMunicipio, idProceso),
-    )
-      .then(setSecciones)
-      .catch(() => setSecciones([]))
-  }, [idProceso, idMunicipio])
+    cargarConRespaldo(`secciones:${idProceso}`, () =>
+      seccionServicio.listar(null, idProceso),
+    ).then((datos) => setSeccionesProceso(datos ?? []))
+  }, [idProceso])
+
+  /** Las del municipio elegido, filtradas en memoria. */
+  const secciones = useMemo(
+    () =>
+      idMunicipio
+        ? seccionesProceso.filter((s) => s.id_municipio === idMunicipio)
+        : [],
+    [seccionesProceso, idMunicipio],
+  )
 
   /*
    * Casillas de todo el municipio, no de la sección.
@@ -167,31 +170,77 @@ export function MovilCaptura() {
    * completo —una sola petición, unos cientos de filas— queda guardado en el
    * teléfono, y al elegir sección se filtra en memoria sin tocar la red.
    */
-  // ¿Está este municipio listo para trabajarse sin señal?
+  // ¿Está el proceso listo para trabajarse sin señal?
   useEffect(() => {
-    if (!idProceso || !idEleccion || !idMunicipio) {
+    if (!idProceso || !idEleccion) {
       setListoSinConexion(false)
       return
     }
-    setListoSinConexion(
-      hayCache(`secciones:${idProceso}:${idMunicipio}`) &&
-        hayCache(`casillasMunicipio:${idEleccion}:${idMunicipio}`) &&
-        hayCache(`opciones:${idEleccion}`),
-    )
-  }, [idProceso, idEleccion, idMunicipio, secciones, casillasMunicipio, opciones])
+    let vigente = true
+    Promise.all([
+      hayCatalogo(`secciones:${idProceso}`),
+      hayCatalogo(`casillas:${idEleccion}`),
+      hayCatalogo(`opciones:${idEleccion}`),
+    ]).then(([s, c, o]) => {
+      if (vigente) setListoSinConexion(s && c && o)
+    })
+    return () => {
+      vigente = false
+    }
+  }, [idProceso, idEleccion, seccionesProceso, casillasEleccion, opciones])
 
+  /*
+   * Casillas: dos caminos, según lo que haya en el teléfono.
+   *
+   * Todo el proceso pesa unos 2 MB. Bajarlo en cada cambio de elección sería
+   * un abuso de los datos del usuario, así que solo se descarga cuando se pide
+   * con «Preparar».
+   *
+   * Mientras no esté descargado se piden las de la sección elegida —unos
+   * kilobytes— y así se puede capturar con red sin preparar nada. Si ya está
+   * descargado, todo sale de la copia local y no se toca la red.
+   */
   useEffect(() => {
-    if (!idEleccion || !idMunicipio) {
-      setCasillasMunicipio([])
+    if (!idEleccion) {
+      setCasillasEleccion([])
+      setDescargado(false)
       return
     }
-    conCache(`casillasMunicipio:${idEleccion}:${idMunicipio}`, () =>
-      casillaServicio.listar(idEleccion, { idMunicipio }),
-    )
-      .then(setCasillasMunicipio)
-      .catch(() => setCasillasMunicipio([]))
-  }, [idEleccion, idMunicipio])
+    let vigente = true
+    leerCatalogo<Casilla[]>(`casillas:${idEleccion}`).then((guardadas) => {
+      if (!vigente) return
+      if (guardadas && guardadas.length > 0) {
+        setCasillasEleccion(guardadas)
+        setDescargado(true)
+      } else {
+        setCasillasEleccion([])
+        setDescargado(false)
+      }
+    })
+    return () => {
+      vigente = false
+    }
+  }, [idEleccion])
 
+  /** Sección suelta, solo cuando el proceso completo no está descargado. */
+  useEffect(() => {
+    if (!idEleccion || !claveSeccion || descargado) {
+      setCasillasSeccion([])
+      return
+    }
+    conCache(`casillas:${idEleccion}:${claveSeccion}`, () =>
+      casillaServicio.listar(idEleccion, { seccion: claveSeccion }),
+    )
+      .then(setCasillasSeccion)
+      .catch(() => setCasillasSeccion([]))
+  }, [idEleccion, claveSeccion, descargado])
+
+  const casillas = useMemo(() => {
+    const origen = descargado ? casillasEleccion : casillasSeccion
+    return claveSeccion ? origen.filter((c) => c.seccion === claveSeccion) : []
+  }, [descargado, casillasEleccion, casillasSeccion, claveSeccion])
+
+  const casilla = casillas.find((c) => c.id === idCasilla) ?? null
 
   useEffect(() => {
     if (casillas.length > 0 && !casillas.some((c) => c.id === idCasilla)) {
@@ -284,21 +333,21 @@ export function MovilCaptura() {
    * que la copia del teléfono sea la más reciente antes de salir a la casilla.
    */
   async function preparar() {
-    if (!idProceso || !idEleccion || !idMunicipio) return
+    if (!idProceso || !idEleccion) return
     setPreparando(true)
     setAviso(null)
     try {
-      const ss = await seccionServicio.listar(idMunicipio, idProceso)
-      guardarCache(`secciones:${idProceso}:${idMunicipio}`, ss)
+      const ss = await seccionServicio.listar(null, idProceso)
+      await guardarCatalogo(`secciones:${idProceso}`, ss)
 
-      const cs = await casillaServicio.listar(idEleccion, { idMunicipio })
-      guardarCache(`casillasMunicipio:${idEleccion}:${idMunicipio}`, cs)
+      const cs = await casillaServicio.listar(idEleccion)
+      await guardarCatalogo(`casillas:${idEleccion}`, cs)
 
       const op = await eleccionServicio.opciones(idEleccion)
-      guardarCache(`opciones:${idEleccion}`, op)
+      await guardarCatalogo(`opciones:${idEleccion}`, op)
 
-      setSecciones(ss)
-      setCasillasMunicipio(cs)
+      setSeccionesProceso(ss)
+      setCasillasEleccion(cs)
       setOpciones(op)
       setListoSinConexion(true)
       setAviso({
@@ -523,19 +572,19 @@ export function MovilCaptura() {
             La caché automática solo guarda lo que ya se consultó. Este botón
             descarga el municipio completo a propósito, para que el teléfono
             esté listo antes de salir a la casilla. */}
-        {idMunicipio && idEleccion && (
+        {idProceso && idEleccion && (
           <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-borde bg-superficie px-4 py-3">
             <div className="min-w-0">
               <p className="flex items-center gap-1.5 text-sm text-texto">
                 {listoSinConexion && <CheckCircle2 size={15} className="shrink-0 text-primario" />}
                 {listoSinConexion
-                  ? 'Listo para trabajar sin señal'
+                  ? 'Proceso listo para trabajar sin señal'
                   : 'Sin descargar en este teléfono'}
               </p>
               <p className="mt-0.5 truncate text-xs text-texto-tenue">
                 {listoSinConexion
-                  ? `${secciones.length} secciones · ${casillasMunicipio.length} casillas`
-                  : 'Descárgalo antes de salir a la casilla.'}
+                  ? `${seccionesProceso.length} secciones · ${casillasEleccion.length} casillas`
+                  : 'Descarga el proceso completo antes de salir.'}
               </p>
             </div>
 
