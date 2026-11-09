@@ -74,6 +74,23 @@ export const cola = {
     return transaccion<number>('readonly', (a) => a.count())
   },
 
+  /**
+   * Captura pendiente de una casilla, si la hay.
+   *
+   * Hace falta para que la pantalla de captura sepa que ese acta existe en el
+   * teléfono aunque el servidor todavía no la tenga: sin esto, volver a la
+   * casilla mostraba el formulario vacío y parecía que no se había guardado.
+   */
+  async buscar(idCasilla: number, idEleccion: number): Promise<CapturaEnCola | null> {
+    const filas = await transaccion<CapturaEnCola[]>('readonly', (a) => a.getAll())
+    return (
+      filas.find(
+        (f) =>
+          f.datos.id_casilla === idCasilla && f.datos.id_eleccion === idEleccion,
+      ) ?? null
+    )
+  },
+
   async eliminar(idCliente: string): Promise<void> {
     await transaccion('readwrite', (a) => a.delete(idCliente))
   },

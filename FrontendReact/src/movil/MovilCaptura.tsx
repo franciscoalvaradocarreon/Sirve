@@ -8,7 +8,7 @@ import { eleccionServicio } from '../api/eleccionServicio'
 import { municipioServicio } from '../api/municipioServicio'
 import { procesoServicio } from '../api/procesoServicio'
 import { seccionServicio } from '../api/seccionServicio'
-import { cola } from '../utils/cola'
+import { cola, type CapturaEnCola } from '../utils/cola'
 import { useProceso } from './ProcesoContext'
 import { AvisoFlotante } from './AvisoFlotante'
 import { conCache } from '../utils/cache'
@@ -52,6 +52,8 @@ export function MovilCaptura() {
   const [casillasEleccion, setCasillasEleccion] = useState<Casilla[]>([])
   const [casillasSeccion, setCasillasSeccion] = useState<Casilla[]>([])
   const [descargado, setDescargado] = useState(false)
+  /** Capturas que están en el teléfono sin enviar. */
+  const [enCola, setEnCola] = useState<CapturaEnCola[]>([])
   const [opciones, setOpciones] = useState<OpcionBoleta[]>([])
 
   const [votos, setVotos] = useState<Record<number, string>>({})
@@ -63,7 +65,7 @@ export function MovilCaptura() {
   const [preparando, setPreparando] = useState(false)
   const [listoSinConexion, setListoSinConexion] = useState(false)
   const [aviso, setAviso] = useState<
-    { tipo: 'ok' | 'cola' | 'error'; texto: string } | null
+    { tipo: 'ok' | 'cola' | 'info' | 'error'; texto: string } | null
   >(null)
 
   const idProceso = Number(parametros.get('id_proceso')) || null
@@ -259,6 +261,28 @@ export function MovilCaptura() {
       .catch(() => setOpciones([]))
   }, [idEleccion])
 
+  /* ------------------------- capturas sin enviar ------------------------- */
+
+  const recargarCola = () => {
+    cola.listar().then(setEnCola).catch(() => setEnCola([]))
+  }
+
+  useEffect(() => {
+    recargarCola()
+  }, [idCasilla, idEleccion])
+
+  /** Casillas de esta elección que tienen captura esperando en el teléfono. */
+  const pendientesPorCasilla = useMemo(
+    () =>
+      new Set(
+        enCola
+          .filter((f) => f.datos.id_eleccion === idEleccion)
+          .map((f) => f.datos.id_casilla),
+      ),
+    [enCola, idEleccion],
+  )
+
+
   /* --------------------------- captura existente -------------------------- */
 
   useEffect(() => {
@@ -270,11 +294,40 @@ export function MovilCaptura() {
     if (!idCasilla || !idEleccion) return
 
     let vigente = true
-    capturaServicio
-      .consultar(idCasilla, idEleccion)
-      .then(async (c) => {
+
+    ;(async () => {
+      /*
+       * Primero se mira el teléfono, no el servidor.
+       *
+       * Una captura hecha sin conexión vive en la cola, y el servidor no sabe
+       * nada de ella: consultarlo primero mostraba el formulario vacío y daba
+       * la impresión de que no se había guardado. Lo que está en el teléfono
+       * es más reciente, así que manda.
+       */
+      const enEspera = await cola.buscar(idCasilla, idEleccion).catch(() => null)
+      if (!vigente) return
+
+      if (enEspera) {
+        const mapa: Record<number, string> = {}
+        enEspera.datos.votos.forEach((v) => {
+          mapa[v.id_opcion] = String(v.votos)
+        })
+        setVotos(mapa)
+        setTotalActa(String(enEspera.datos.total_acta))
+        setNulos(String(enEspera.datos.nulos))
+        setNoRegistrados(String(enEspera.datos.no_registrados))
+        setAviso({
+          tipo: 'info',
+          texto: 'Esta casilla tiene un acta capturada en el teléfono, sin enviar.',
+        })
+        return
+      }
+
+      try {
+        const c = await capturaServicio.consultar(idCasilla, idEleccion)
         if (!vigente) return
         const detalle = await capturaServicio.votos(idCasilla, idEleccion)
+        if (!vigente) return
         const mapa: Record<number, string> = {}
         detalle.forEach((v) => {
           mapa[v.id_opcion] = String(v.votos)
@@ -283,9 +336,8 @@ export function MovilCaptura() {
         setTotalActa(String(c.total_acta))
         setNulos(String(c.nulos))
         setNoRegistrados(String(c.no_registrados))
-        setAviso({ tipo: 'cola', texto: 'Esta casilla ya tiene acta capturada. Al guardar se reemplaza.' })
-      })
-      .catch(() => {
+        setAviso({ tipo: 'info', texto: 'Esta casilla ya tiene acta capturada. Al guardar se reemplaza.' })
+      } catch {
         // 404 es lo normal: todavía no hay captura. Puede haber un borrador:
         // lo escrito antes de refrescar la pantalla o de quedarse sin batería.
         if (!vigente) return
@@ -295,8 +347,9 @@ export function MovilCaptura() {
         setTotalActa(borrador.totalActa)
         setNulos(borrador.nulos)
         setNoRegistrados(borrador.noRegistrados)
-        setAviso({ tipo: 'cola', texto: 'Se recuperó lo que llevabas escrito.' })
-      })
+        setAviso({ tipo: 'info', texto: 'Se recuperó lo que llevabas escrito.' })
+      }
+    })()
 
     return () => {
       vigente = false
@@ -383,10 +436,18 @@ export function MovilCaptura() {
     }
   }
 
+  /** Si ya había una captura de esta casilla en la cola, se descarta. */
+  async function quitarPendienteAnterior() {
+    if (!idCasilla || !idEleccion) return
+    const previa = await cola.buscar(idCasilla, idEleccion).catch(() => null)
+    if (previa) await cola.eliminar(previa.id_cliente)
+  }
+
   /** Guarda en el teléfono sin intentar enviar. */
   async function guardarSinEnviar() {
     const datos = datosDeCaptura()
     if (!casilla || !datos) return
+    await quitarPendienteAnterior()
     await cola.encolar({
       id_cliente: datos.id_cliente,
       creado: Date.now(),
@@ -399,6 +460,7 @@ export function MovilCaptura() {
       tipo: 'cola',
       texto: 'Guardada en el teléfono. Se enviará al recuperar la conexión.',
     })
+    recargarCola()
   }
 
   async function guardar() {
@@ -411,6 +473,7 @@ export function MovilCaptura() {
       setGuardando(false)
       return
     }
+    await quitarPendienteAnterior()
 
     try {
       await capturaServicio.guardar(datos)
@@ -439,6 +502,7 @@ export function MovilCaptura() {
       }
     } finally {
       setGuardando(false)
+      recargarCola()
     }
   }
 
@@ -474,7 +538,7 @@ export function MovilCaptura() {
     <div className="flex min-h-full flex-col">
       {/* Confirmación flotante: un segundo y se va. El error no pasa por
           aquí, se queda en la franja de arriba para que dé tiempo a leerlo. */}
-      {aviso && aviso.tipo !== 'error' && (
+      {aviso && (aviso.tipo === 'ok' || aviso.tipo === 'cola') && (
         <AvisoFlotante
           tipo={aviso.tipo}
           texto={aviso.texto}
@@ -484,9 +548,19 @@ export function MovilCaptura() {
       )}
       <div className="flex-1 px-4 pb-6 pt-4">
         {/* Los errores se quedan a la vista: hay que leerlos y corregir algo. */}
-        {aviso && aviso.tipo === 'error' && (
-          <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
-            <TriangleAlert size={16} className="mt-0.5 shrink-0" />
+        {aviso && (aviso.tipo === 'error' || aviso.tipo === 'info') && (
+          <div
+            className={`mb-4 flex items-start gap-2 rounded-lg border p-3 text-sm ${
+              aviso.tipo === 'error'
+                ? 'border-red-300 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300'
+                : 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300'
+            }`}
+          >
+            {aviso.tipo === 'error' ? (
+              <TriangleAlert size={16} className="mt-0.5 shrink-0" />
+            ) : (
+              <CloudOff size={16} className="mt-0.5 shrink-0" />
+            )}
             <span>{aviso.texto}</span>
           </div>
         )}
@@ -559,7 +633,7 @@ export function MovilCaptura() {
                 {casillas.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.clave}
-                    {c.capturada ? ' ✓' : ''}
+                    {pendientesPorCasilla.has(c.id) ? ' •' : c.capturada ? ' ✓' : ''}
                   </option>
                 ))}
               </select>
