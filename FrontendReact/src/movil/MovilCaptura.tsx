@@ -39,6 +39,8 @@ import type {
  * capturas que no se pueden enviar se encolan en el teléfono con su
  * identificador de cliente, así que reenviarlas después no duplica nada.
  */
+const CLAVE_ULTIMA_SELECCION = 'sirve:ultimaSeleccion'
+
 export function MovilCaptura() {
   const [parametros, setParametros] = useSearchParams()
 
@@ -110,6 +112,38 @@ export function MovilCaptura() {
     )
   }
 
+  /* --------------------------- última selección --------------------------- */
+
+  /*
+   * La selección vive en la URL, y la URL se pierde al cambiar de pestaña:
+   * volver de «Pendientes» dejaba los combos en blanco y había que empezar de
+   * nuevo. Se guarda la última combinación y se restaura al volver sin
+   * parámetros.
+   *
+   * En sessionStorage y no en localStorage: es la casilla en la que se estaba
+   * trabajando hoy, no una preferencia permanente.
+   */
+  useEffect(() => {
+    const actual = parametros.toString()
+    if (!actual) return
+    try {
+      sessionStorage.setItem(CLAVE_ULTIMA_SELECCION, actual)
+    } catch {
+      // Sin almacenamiento: solo se pierde la comodidad de volver al mismo sitio.
+    }
+  }, [parametros])
+
+  useEffect(() => {
+    if (parametros.toString()) return
+    try {
+      const guardada = sessionStorage.getItem(CLAVE_ULTIMA_SELECCION)
+      if (guardada) setParametros(new URLSearchParams(guardada), { replace: true })
+    } catch {
+      // Nada guardado.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   /* ------------------------------ catálogos ------------------------------ */
 
   useEffect(() => {
@@ -118,7 +152,17 @@ export function MovilCaptura() {
         setProcesos(datos)
         if (!idProceso && datos.length > 0) {
           const activo = datos.find((p) => p.activo) ?? datos[0]
-          cambiar('id_proceso', String(activo.id))
+          // Se comprueba dentro del actualizador y no fuera: la selección
+          // guardada puede haberse restaurado entre el primer dibujo y esta
+          // respuesta, y pisarla devolvería al usuario a otro proceso del que
+          // estaba usando.
+          setParametros(
+            (prev) => {
+              if (!prev.get('id_proceso')) prev.set('id_proceso', String(activo.id))
+              return prev
+            },
+            { replace: true },
+          )
         }
       })
       .catch(() => setAviso({ tipo: 'error', texto: 'Sin datos guardados de procesos.' }))
