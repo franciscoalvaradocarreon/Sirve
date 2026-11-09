@@ -321,7 +321,7 @@ export function MovilCaptura() {
           alCerrar={() => setAviso(null)}
         />
       )}
-      <div className="flex-1 px-4 pb-40 pt-4">
+      <div className="flex-1 px-4 pb-6 pt-4">
         {/* Los errores se quedan a la vista: hay que leerlos y corregir algo. */}
         {aviso && aviso.tipo === 'error' && (
           <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
@@ -450,9 +450,13 @@ export function MovilCaptura() {
         )}
       </div>
 
-      {/* Resumen fijo: siempre a la vista mientras se captura */}
+      {/* Resumen al final del contenido, no fijo.
+
+          Fijo ocupaba casi un tercio de la pantalla y dejaba la boleta en una
+          ventana pequeña. Con la boleta en dos columnas, el resumen queda a un
+          desplazamiento corto y el espacio se aprovecha para leer los votos. */}
       {casilla && (
-        <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] border-t border-borde bg-superficie px-4 py-3">
+        <div className="mx-4 mb-4 rounded-xl border border-borde bg-superficie p-4">
           <div className="mb-3 grid grid-cols-3 gap-2">
             <label className="text-xs text-texto-tenue">
               No registrados
