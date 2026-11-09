@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { ClipboardCheck, CloudOff, ListChecks } from 'lucide-react'
 import { cola } from '../utils/cola'
 import { NOMBRE_SISTEMA } from '../utils/tema'
+import { useProceso } from './ProcesoContext'
 
 /**
  * Armazón de las pantallas móviles.
@@ -17,6 +18,7 @@ import { NOMBRE_SISTEMA } from '../utils/tema'
 export function MovilLayout() {
   const [enLinea, setEnLinea] = useState(navigator.onLine)
   const [pendientes, setPendientes] = useState(0)
+  const { proceso } = useProceso()
 
   useEffect(() => {
     const alCambiar = () => setEnLinea(navigator.onLine)
@@ -54,10 +56,21 @@ export function MovilLayout() {
   return (
     <div className="flex min-h-dvh flex-col bg-fondo">
       <header className="sticky top-0 z-10 border-b border-borde bg-superficie/95 backdrop-blur">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div>
+        <div className="flex items-center justify-between gap-3 px-4 py-3">
+          <div className="min-w-0">
             <p className="text-sm font-semibold text-texto">{NOMBRE_SISTEMA}</p>
-            <p className="text-xs text-texto-tenue">Captura en casilla</p>
+
+            {/* Renglón con el uso y, al lado, el proceso en curso. Va como
+                franja y no como desplegable: quien captura no lo elige, solo
+                necesita saber en cuál está. */}
+            <div className="mt-1 flex items-center gap-2">
+              <span className="text-xs text-texto-tenue">Captura en casilla</span>
+              {proceso && (
+                <span className="rounded-md border border-primario/30 bg-primario/10 px-2 py-0.5 text-xs font-medium text-primario">
+                  Proceso {proceso.anio}
+                </span>
+              )}
+            </div>
           </div>
 
           {enLinea ? (

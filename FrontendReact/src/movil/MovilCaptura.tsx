@@ -9,6 +9,7 @@ import { municipioServicio } from '../api/municipioServicio'
 import { procesoServicio } from '../api/procesoServicio'
 import { seccionServicio } from '../api/seccionServicio'
 import { cola } from '../utils/cola'
+import { useProceso } from './ProcesoContext'
 import { conCache } from '../utils/cache'
 import { nuevoUuid } from '../utils/uuid'
 import type {
@@ -34,6 +35,7 @@ export function MovilCaptura() {
   const [parametros, setParametros] = useSearchParams()
 
   const [enLinea, setEnLinea] = useState(navigator.onLine)
+  const { setProceso } = useProceso()
 
   const [procesos, setProcesos] = useState<Proceso[]>([])
   const [elecciones, setElecciones] = useState<Eleccion[]>([])
@@ -59,6 +61,11 @@ export function MovilCaptura() {
   const idCasilla = Number(parametros.get('id_casilla')) || null
 
   const proceso = procesos.find((p) => p.id === idProceso) ?? null
+
+  // La barra superior muestra el proceso; esta pantalla es quien lo conoce.
+  useEffect(() => {
+    setProceso(proceso)
+  }, [proceso, setProceso])
   const casilla = casillas.find((c) => c.id === idCasilla) ?? null
   const eleccion = elecciones.find((e) => e.id === idEleccion) ?? null
 
@@ -331,12 +338,6 @@ export function MovilCaptura() {
             casilla no tiene por qué escogerlo, y un desplegable de más es una
             forma de equivocarse. Solo se muestra cuál está en uso. */}
         <div className="mb-4 space-y-3 rounded-xl border border-borde bg-superficie p-4">
-          {proceso && (
-            <p className="text-xs uppercase tracking-wide text-texto-tenue">
-              Proceso {proceso.anio}
-              {proceso.activo ? ' · vigente' : ` · ${proceso.estado.toLowerCase()}`}
-            </p>
-          )}
 
           <label className="block text-sm text-texto-tenue">
             Elección

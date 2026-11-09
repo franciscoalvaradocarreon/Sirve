@@ -11,6 +11,7 @@ import { Captura } from './components/Captura'
 import { Avance } from './components/Avance'
 import { EnConstruccion } from './components/EnConstruccion'
 import { MovilLayout } from './movil/MovilLayout'
+import { ProcesoProveedor } from './movil/ProcesoContext'
 import { MovilCaptura } from './movil/MovilCaptura'
 import { MovilPendientes } from './movil/MovilPendientes'
 import { TemaProveedor } from './context/TemaContext'
@@ -36,7 +37,14 @@ export default function App() {
 
           {/* Teléfono y tableta: árbol propio, sin menú lateral, con
               navegación inferior. Las pantallas de escritorio no se tocan. */}
-          <Route path="/movil" element={<MovilLayout />}>
+          <Route
+            path="/movil"
+            element={
+              <ProcesoProveedor>
+                <MovilLayout />
+              </ProcesoProveedor>
+            }
+          >
             <Route index element={<MovilCaptura />} />
             <Route path="pendientes" element={<MovilPendientes />} />
           </Route>
