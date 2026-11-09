@@ -3,6 +3,11 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { ClipboardCheck, CloudOff, ListChecks } from 'lucide-react'
 import { cola } from '../utils/cola'
 import { NOMBRE_SISTEMA } from '../utils/tema'
+import {
+  aplicarTextoGrande,
+  guardarTextoGrande,
+  leerTextoGrande,
+} from '../utils/texto'
 import { useProceso } from './ProcesoContext'
 
 /**
@@ -18,7 +23,15 @@ import { useProceso } from './ProcesoContext'
 export function MovilLayout() {
   const [enLinea, setEnLinea] = useState(navigator.onLine)
   const [pendientes, setPendientes] = useState(0)
+  const [textoGrande, setTextoGrande] = useState(leerTextoGrande())
   const { proceso } = useProceso()
+
+  const alternarTexto = () => {
+    const nuevo = !textoGrande
+    setTextoGrande(nuevo)
+    aplicarTextoGrande(nuevo)
+    guardarTextoGrande(nuevo)
+  }
 
   useEffect(() => {
     const alCambiar = () => setEnLinea(navigator.onLine)
@@ -73,22 +86,39 @@ export function MovilLayout() {
             </div>
           </div>
 
-          {enLinea ? (
-            <span
-              className={`rounded-full px-2.5 py-1 text-xs ${
-                pendientes === 0
-                  ? 'bg-primario/10 text-primario'
-                  : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+          <div className="flex shrink-0 items-center gap-2">
+            {enLinea ? (
+              <span
+                className={`rounded-full px-2.5 py-1 text-xs ${
+                  pendientes === 0
+                    ? 'bg-primario/10 text-primario'
+                    : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                }`}
+              >
+                {pendientes === 0 ? 'Al día' : `${pendientes} por enviar`}
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-1 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                <CloudOff size={13} />
+                Sin conexión
+              </span>
+            )}
+
+            {/* Tamaño de letra. Es lo que más ayuda cuando no se ve bien de
+                cerca: sube todo, no solo los números. */}
+            <button
+              onClick={alternarTexto}
+              aria-pressed={textoGrande}
+              title={textoGrande ? 'Volver al tamaño normal' : 'Agrandar la letra'}
+              className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+                textoGrande
+                  ? 'border-primario bg-primario text-white'
+                  : 'border-borde text-texto-tenue'
               }`}
             >
-              {pendientes === 0 ? 'Al día' : `${pendientes} por enviar`}
-            </span>
-          ) : (
-            <span className="flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-1 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-              <CloudOff size={13} />
-              Sin conexión
-            </span>
-          )}
+              {textoGrande ? 'A−' : 'A+'}
+            </button>
+          </div>
         </div>
       </header>
 

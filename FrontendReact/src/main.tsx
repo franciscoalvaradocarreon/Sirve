@@ -2,11 +2,14 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import { aplicarTema } from './utils/tema'
+import { aplicarTextoGrande, leerTextoGrande } from './utils/texto'
 import './index.css'
 
 // El color primario se escribe antes de pintar para que no haya un parpadeo
-// con el color por omisión.
+// con el color por omisión. El tamaño de letra, igual: si se aplicara después
+// de montar, la pantalla se vería pequeña y luego saltaría.
 aplicarTema()
+aplicarTextoGrande(leerTextoGrande())
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

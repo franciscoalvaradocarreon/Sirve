@@ -408,15 +408,27 @@ export function MovilCaptura() {
           </div>
         </div>
 
-        {/* Boleta: un renglón por opción, campo a la derecha */}
+        {/* Boleta en dos columnas.
+            
+            Una boleta de 2021 tiene 25 opciones: en una sola columna son más
+            de dos pantallas de scroll, y quien captura pierde el renglón donde
+            iba. En dos columnas cabe casi en una.
+            
+            Cada opción es una celda cerrada con su etiqueta a la izquierda y
+            su campo a la derecha, para que no haya duda de a cuál pertenece el
+            número. Por debajo de 360 px de ancho vuelve a una columna: ahí dos
+            partirían las etiquetas largas y el riesgo de equivocarse sube. */}
         {casilla && opciones.length > 0 && (
-          <div className="rounded-xl border border-borde bg-superficie">
+          <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-2">
             {opciones.map((o, i) => (
               <label
                 key={o.id}
-                className="flex items-center justify-between gap-3 border-b border-borde px-4 py-3 last:border-0"
+                title={o.etiqueta}
+                className="flex min-h-14 items-center justify-between gap-2 rounded-xl border border-borde bg-superficie px-3 py-2 transition-colors focus-within:border-primario"
               >
-                <span className="text-sm text-texto">{o.etiqueta}</span>
+                <span className="min-w-0 truncate text-xs leading-tight text-texto-tenue">
+                  {o.etiqueta}
+                </span>
                 <input
                   value={numeroDe(o.id)}
                   onChange={(e) =>
@@ -426,7 +438,7 @@ export function MovilCaptura() {
                   pattern="[0-9]*"
                   enterKeyHint={i === opciones.length - 1 ? 'done' : 'next'}
                   placeholder="0"
-                  className="w-20 rounded-lg border border-borde bg-fondo px-2 py-2 text-right text-lg tabular-nums text-texto focus:border-primario focus:outline-none"
+                  className="w-16 shrink-0 rounded-lg border border-borde bg-fondo px-2 py-1.5 text-right text-lg tabular-nums text-texto focus:border-primario focus:outline-none"
                 />
               </label>
             ))}

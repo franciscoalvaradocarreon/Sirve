@@ -77,3 +77,15 @@ body {
   scrollbar-width: thin;
   scrollbar-color: var(--borde) transparent;
 }
+
+/* ============================================================================
+ * Tamaño de letra cómodo
+ *
+ * Todo lo que usa clases de Tailwind está en rem, así que subir el tamaño
+ * base del documento agranda la interfaz entera de una vez. 16 px es el
+ * tamaño normal; 18.5 px es un escalón pensado para leer de cerca en un
+ * teléfono, sin que los renglones se partan.
+ * ==========================================================================*/
+html.texto-grande {
+  font-size: 18.5px;
+}
