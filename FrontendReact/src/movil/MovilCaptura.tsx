@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Check, CloudOff, Save, TriangleAlert } from 'lucide-react'
+import { CloudOff, Save, TriangleAlert } from 'lucide-react'
 import { ErrorApi } from '../api/cliente'
 import { capturaServicio } from '../api/capturaServicio'
 import { casillaServicio } from '../api/casillaServicio'
@@ -10,6 +10,7 @@ import { procesoServicio } from '../api/procesoServicio'
 import { seccionServicio } from '../api/seccionServicio'
 import { cola } from '../utils/cola'
 import { useProceso } from './ProcesoContext'
+import { AvisoFlotante } from './AvisoFlotante'
 import { conCache } from '../utils/cache'
 import { nuevoUuid } from '../utils/uuid'
 import type {
@@ -310,24 +311,21 @@ export function MovilCaptura() {
 
   return (
     <div className="flex min-h-full flex-col">
+      {/* Confirmación flotante: un segundo y se va. El error no pasa por
+          aquí, se queda en la franja de arriba para que dé tiempo a leerlo. */}
+      {aviso && aviso.tipo !== 'error' && (
+        <AvisoFlotante
+          tipo={aviso.tipo}
+          texto={aviso.texto}
+          duracionMs={aviso.tipo === 'ok' ? 1000 : 1800}
+          alCerrar={() => setAviso(null)}
+        />
+      )}
       <div className="flex-1 px-4 pb-40 pt-4">
-        {aviso && (
-          <div
-            className={`mb-4 flex items-start gap-2 rounded-lg border p-3 text-sm ${
-              aviso.tipo === 'ok'
-                ? 'border-primario/40 bg-primario/10 text-primario'
-                : aviso.tipo === 'cola'
-                  ? 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300'
-                  : 'border-red-300 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300'
-            }`}
-          >
-            {aviso.tipo === 'ok' ? (
-              <Check size={16} className="mt-0.5 shrink-0" />
-            ) : aviso.tipo === 'cola' ? (
-              <CloudOff size={16} className="mt-0.5 shrink-0" />
-            ) : (
-              <TriangleAlert size={16} className="mt-0.5 shrink-0" />
-            )}
+        {/* Los errores se quedan a la vista: hay que leerlos y corregir algo. */}
+        {aviso && aviso.tipo === 'error' && (
+          <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+            <TriangleAlert size={16} className="mt-0.5 shrink-0" />
             <span>{aviso.texto}</span>
           </div>
         )}
