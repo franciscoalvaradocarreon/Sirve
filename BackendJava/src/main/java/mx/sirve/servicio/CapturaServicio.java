@@ -7,6 +7,7 @@ import mx.sirve.modelo.dto.CapturaDTO;
 import mx.sirve.modelo.dto.OpcionBoletaDTO;
 import mx.sirve.modelo.dto.VotoDTO;
 import mx.sirve.repositorio.CapturaRepositorio;
+import mx.sirve.repositorio.CapturistaRepositorio;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,9 +30,12 @@ import java.util.Set;
 public class CapturaServicio {
 
     private final CapturaRepositorio capturaRepositorio;
+    private final CapturistaRepositorio capturistaRepositorio;
 
-    public CapturaServicio(CapturaRepositorio capturaRepositorio) {
+    public CapturaServicio(CapturaRepositorio capturaRepositorio,
+                           CapturistaRepositorio capturistaRepositorio) {
         this.capturaRepositorio = capturaRepositorio;
+        this.capturistaRepositorio = capturistaRepositorio;
     }
 
     @Transactional(readOnly = true)
@@ -51,8 +55,18 @@ public class CapturaServicio {
      * puede recapturar y la anterior se pisa.
      */
     @Transactional
-    public CapturaDTO guardar(CapturaCrearDTO datos) {
+    public CapturaDTO guardar(CapturaCrearDTO datos, int idCapturista, int idDispositivo) {
         validar(datos);
+
+        /*
+         * El pase identifica a una persona con sus casillas. Aunque alguien
+         * manipule la petición, solo puede escribir donde tiene asignación:
+         * un teléfono robado no alcanza a las casillas de los demás.
+         */
+        if (!capturistaRepositorio.cubre(idCapturista, datos.idCasilla())) {
+            throw new DatosInvalidosExcepcion("CASILLA_NO_ASIGNADA",
+                    "Esta casilla no está entre las que tienes asignadas.");
+        }
 
         int suma = datos.votos().stream().mapToInt(VotoDTO::votos).sum();
         int noRegistrados = datos.noRegistrados() == null ? 0 : datos.noRegistrados();
@@ -68,7 +82,9 @@ public class CapturaServicio {
                     noRegistrados,
                     nulos,
                     suma,
-                    datos.autorTexto());
+                    datos.autorTexto(),
+                    idCapturista,
+                    idDispositivo);
         } catch (DataIntegrityViolationException e) {
             // La llave foránea (id_casilla, id_eleccion) rechaza casillas que no
             // están declaradas para esa elección.

@@ -62,22 +62,26 @@ public class CapturaRepositorio {
      */
     public long guardarCabecera(String idCliente, int idCasilla, int idEleccion,
                                 int totalActa, int noRegistrados, int nulos,
-                                int sumaOpciones, String autorTexto) {
+                                int sumaOpciones, String autorTexto,
+                                int idCapturista, int idDispositivo) {
         Long id = jdbc.queryForObject("""
                 INSERT INTO sirve.captura (id_cliente, id_casilla, id_eleccion, total_acta,
-                                           no_registrados, nulos, suma_opciones, autor_texto)
-                VALUES (?::uuid, ?, ?, ?, ?, ?, ?, ?)
+                                           no_registrados, nulos, suma_opciones, autor_texto,
+                                           id_capturista, id_dispositivo)
+                VALUES (?::uuid, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (id_casilla, id_eleccion) DO UPDATE
                    SET total_acta     = EXCLUDED.total_acta,
                        no_registrados = EXCLUDED.no_registrados,
                        nulos          = EXCLUDED.nulos,
                        suma_opciones  = EXCLUDED.suma_opciones,
                        autor_texto    = EXCLUDED.autor_texto,
+                       id_capturista  = EXCLUDED.id_capturista,
+                       id_dispositivo = EXCLUDED.id_dispositivo,
                        recibida_en    = now()
                 RETURNING id
                 """, Long.class,
                 idCliente, idCasilla, idEleccion, totalActa, noRegistrados, nulos,
-                sumaOpciones, autorTexto);
+                sumaOpciones, autorTexto, idCapturista, idDispositivo);
         return id == null ? 0L : id;
     }
 
