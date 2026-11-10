@@ -13,20 +13,20 @@ export const capturistaServicio = {
     nombre: string
     telefono: string | null
     activo: boolean
-    casillas: number[]
+    secciones: number[]
   }): Promise<Capturista> => (await cliente.post<Capturista>('/capturistas', datos)).data,
 
   actualizar: async (
     id: number,
-    datos: { nombre: string; telefono: string | null; activo: boolean; casillas: number[] },
+    datos: { nombre: string; telefono: string | null; activo: boolean; secciones: number[] },
   ): Promise<Capturista> => (await cliente.put<Capturista>(`/capturistas/${id}`, datos)).data,
 
   eliminar: async (id: number): Promise<void> => {
     await cliente.delete(`/capturistas/${id}`)
   },
 
-  asignar: async (id: number, casillas: number[]): Promise<Capturista> =>
-    (await cliente.put<Capturista>(`/capturistas/${id}/casillas`, { casillas })).data,
+  asignarSecciones: async (id: number, secciones: number[]): Promise<Capturista> =>
+    (await cliente.put<Capturista>(`/capturistas/${id}/secciones`, { secciones })).data,
 
   telefonos: async (id: number): Promise<Telefono[]> =>
     (await cliente.get<Telefono[]>(`/capturistas/${id}/telefonos`)).data,

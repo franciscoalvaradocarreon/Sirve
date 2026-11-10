@@ -68,11 +68,12 @@ public class CapturistaControlador {
         return ResponseEntity.noContent().build();
     }
 
-    /** Reemplaza la asignación completa de casillas. */
-    @PutMapping("/{id}/casillas")
+    /** Reemplaza la asignación completa de secciones. */
+    @PutMapping("/{id}/secciones")
     public ResponseEntity<CapturistaDTO> asignar(@PathVariable int id,
                                                  @RequestBody Map<String, List<Integer>> cuerpo) {
-        return ResponseEntity.ok(capturistas.asignar(id, cuerpo.getOrDefault("casillas", List.of())));
+        return ResponseEntity.ok(
+                capturistas.asignarSecciones(id, cuerpo.getOrDefault("secciones", List.of())));
     }
 
     @GetMapping("/{id}/telefonos")

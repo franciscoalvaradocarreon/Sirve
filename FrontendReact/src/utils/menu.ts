@@ -2,6 +2,7 @@ import {
   Home,
   FolderTree,
   Vote,
+  Users,
   MapPin,
   Map,
   Layers,
@@ -41,6 +42,14 @@ export const MENU: ElementoMenu[] = [
     hijos: [
       { id: 'captura-nueva', etiqueta: 'Capturar casilla', ruta: '/captura', icono: ClipboardCheck },
       { id: 'captura-consulta', etiqueta: 'Consultar', ruta: '/captura/consulta', icono: ListChecks },
+    ],
+  },
+  {
+    id: 'operacion',
+    etiqueta: 'Operación',
+    icono: Users,
+    hijos: [
+      { id: 'capturistas', etiqueta: 'Capturistas', ruta: '/capturistas', icono: Users },
     ],
   },
   {

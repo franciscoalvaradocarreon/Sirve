@@ -5,6 +5,7 @@ import mx.sirve.excepcion.NoEncontradoExcepcion;
 import mx.sirve.modelo.dto.CapturistaCrearDTO;
 import mx.sirve.modelo.dto.CapturistaDTO;
 import mx.sirve.modelo.dto.CasillaAsignadaDTO;
+import mx.sirve.modelo.dto.SeccionAsignadaDTO;
 import mx.sirve.repositorio.CapturistaRepositorio;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,13 +25,14 @@ public class CapturistaServicio {
 
     @Transactional(readOnly = true)
     public List<CapturistaDTO> listar() {
-        return repositorio.listar().stream().map(this::conAsignadas).toList();
+        return repositorio.listar().stream().map(this::conSecciones).toList();
     }
 
     @Transactional(readOnly = true)
     public CapturistaDTO obtener(int id) {
-        return repositorio.buscar(id).map(this::conAsignadas)
-                .orElseThrow(() -> new NoEncontradoExcepcion("NO_ENCONTRADO", "No existe el capturista " + id));
+        return repositorio.buscar(id).map(this::conSecciones)
+                .orElseThrow(() -> new NoEncontradoExcepcion("NO_ENCONTRADO",
+                        "No existe el capturista " + id));
     }
 
     public CapturistaDTO crear(CapturistaCrearDTO datos) {
@@ -39,8 +41,8 @@ public class CapturistaServicio {
                 datos.nombre().trim(),
                 limpiar(datos.telefono()),
                 datos.activo() == null || datos.activo());
-        if (datos.casillas() != null) {
-            repositorio.asignar(id, datos.casillas());
+        if (datos.secciones() != null) {
+            repositorio.asignarSecciones(id, datos.secciones());
         }
         return obtener(id);
     }
@@ -53,8 +55,8 @@ public class CapturistaServicio {
                 datos.nombre().trim(),
                 limpiar(datos.telefono()),
                 datos.activo() == null || datos.activo());
-        if (datos.casillas() != null) {
-            repositorio.asignar(id, datos.casillas());
+        if (datos.secciones() != null) {
+            repositorio.asignarSecciones(id, datos.secciones());
         }
         return obtener(id);
     }
@@ -65,30 +67,30 @@ public class CapturistaServicio {
     }
 
     /** Asignación completa: reemplaza la que hubiera. */
-    public CapturistaDTO asignar(int id, List<Integer> casillas) {
+    public CapturistaDTO asignarSecciones(int id, List<Integer> secciones) {
         obtener(id);
-        repositorio.asignar(id, casillas == null ? List.of() : casillas);
+        repositorio.asignarSecciones(id, secciones == null ? List.of() : secciones);
         return obtener(id);
     }
 
     @Transactional(readOnly = true)
-    public List<CasillaAsignadaDTO> casillas(int id, int idEleccion) {
-        return repositorio.casillas(id, idEleccion);
+    public List<SeccionAsignadaDTO> secciones(int id) {
+        return repositorio.secciones(id);
     }
 
     /**
-     * Las del propio capturista, para el teléfono. No recibe identificador:
-     * sale del dispositivo autenticado, así nadie puede pedir las de otro.
+     * Las casillas del propio capturista, para el teléfono. No recibe
+     * identificador: sale del dispositivo autenticado.
      */
     @Transactional(readOnly = true)
     public List<CasillaAsignadaDTO> misCasillas(int idCapturista, int idEleccion) {
         return repositorio.casillas(idCapturista, idEleccion);
     }
 
-    private CapturistaDTO conAsignadas(CapturistaDTO c) {
+    private CapturistaDTO conSecciones(CapturistaDTO c) {
         return new CapturistaDTO(
                 c.id(), c.nombre(), c.telefono(), c.activo(), c.casillas(),
-                List.of(), c.creadoEn());
+                repositorio.secciones(c.id()), c.creadoEn());
     }
 
     private void exigirNombre(CapturistaCrearDTO datos) {

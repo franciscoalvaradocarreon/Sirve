@@ -167,14 +167,22 @@ export interface Enrolamiento {
   casillas: CasillaAsignada[]
 }
 
-/** Persona que captura, con sus casillas asignadas. */
+/** Sección asignada a un capturista. */
+export interface SeccionAsignada {
+  id: number
+  clave: string
+  municipio: string
+  casillas: number
+}
+
+/** Persona que captura, con las secciones que cubre. */
 export interface Capturista {
   id: number
   nombre: string
   telefono: string | null
   activo: boolean
   casillas: number
-  asignadas: CasillaAsignada[]
+  secciones: SeccionAsignada[]
   creado_en: string
 }
 
