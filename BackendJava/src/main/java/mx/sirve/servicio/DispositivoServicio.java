@@ -37,12 +37,36 @@ public class DispositivoServicio {
         this.eleccionServicio = eleccionServicio;
     }
 
-    /** Genera un código nuevo para un teléfono del capturista. */
+    /** Máximo de teléfonos activos por capturista. */
+    private static final int MAXIMO_TELEFONOS = 2;
+
+    /**
+     * Genera un código para un teléfono del capturista.
+     *
+     * Si ya tiene uno pendiente de enrolar, se reemite ese: pedir el código
+     * otra vez no debe dejar teléfonos de sobra en la lista.
+     */
     public CodigoEnrolamientoDTO generarCodigo(int idCapturista, String nombre) {
         if (capturistas.buscar(idCapturista).isEmpty()) {
             throw new NoEncontradoExcepcion("NO_ENCONTRADO", "No existe el capturista " + idCapturista);
         }
+
         String codigo = Pases.nuevoCodigo();
+
+        // Ya hay uno esperando: se le cambia el código y se reutiliza.
+        Optional<Integer> pendiente = dispositivos.sinEnrolar(idCapturista);
+        if (pendiente.isPresent()) {
+            int id = pendiente.get();
+            dispositivos.reemitir(id, Pases.hash(codigo));
+            return new CodigoEnrolamientoDTO(id, codigo, nombre);
+        }
+
+        if (dispositivos.activos(idCapturista) >= MAXIMO_TELEFONOS) {
+            throw new DatosInvalidosExcepcion(
+                    "TELEFONOS_COMPLETOS",
+                    "Ya tiene " + MAXIMO_TELEFONOS + " teléfonos. Desactiva uno antes de agregar otro.");
+        }
+
         int id = dispositivos.crear(idCapturista, nombre, Pases.hash(codigo));
         return new CodigoEnrolamientoDTO(id, codigo, nombre);
     }

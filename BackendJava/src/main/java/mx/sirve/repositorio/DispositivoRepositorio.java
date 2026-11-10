@@ -41,6 +41,31 @@ public class DispositivoRepositorio {
         return id == null ? 0 : id;
     }
 
+    /**
+     * Un teléfono del capturista que todavía no se enrola.
+     *
+     * Sirve para no acumular registros: si se pide un código y ya hay uno
+     * pendiente, se reemite ese en lugar de crear otro.
+     */
+    public Optional<Integer> sinEnrolar(int idCapturista) {
+        List<Integer> ids = jdbc.queryForList("""
+                SELECT id FROM sirve.dispositivo
+                 WHERE id_capturista = ? AND activo AND pase_hash IS NULL
+                 ORDER BY creado_en
+                 LIMIT 1
+                """, Integer.class, idCapturista);
+        return ids.stream().findFirst();
+    }
+
+    /** Cuántos teléfonos activos tiene. */
+    public int activos(int idCapturista) {
+        Integer n = jdbc.queryForObject("""
+                SELECT count(*) FROM sirve.dispositivo
+                 WHERE id_capturista = ? AND activo
+                """, Integer.class, idCapturista);
+        return n == null ? 0 : n;
+    }
+
     public List<DispositivoDTO> listar(int idCapturista) {
         return jdbc.query("""
                 SELECT id, nombre, activo, pase_hash, enrolado_en, ultimo_uso
