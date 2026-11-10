@@ -496,51 +496,51 @@ export function MovilCaptura() {
             </select>
           </label>
 
-          {/* Sus casillas, una por botón */}
-          <div>
-            <p className="mb-2 text-xs uppercase tracking-wide text-texto-tenue">
-              Mis casillas · {asignadas.length}
-            </p>
-            {asignadas.length === 0 ? (
-              <p className="py-2 text-sm text-texto-tenue">
-                {enLinea
-                  ? 'No tienes casillas asignadas en esta elección.'
-                  : 'Sin conexión y sin casillas guardadas. Prepara el teléfono con red.'}
-              </p>
-            ) : (
-              <div className="grid grid-cols-2 gap-2">
-                {asignadas.map((c) => {
-                  const elegida = c.id === idCasilla
-                  const pendiente = pendientesPorCasilla.has(c.id)
-                  return (
-                    <button
-                      key={c.id}
-                      onClick={() => cambiar('id_casilla', String(c.id))}
-                      className={`flex min-h-14 flex-col justify-center rounded-xl border px-3 py-2 text-left transition-colors ${
-                        elegida
-                          ? 'border-primario bg-primario/10'
-                          : 'border-borde bg-fondo'
-                      }`}
-                    >
-                      <span className="flex items-center gap-1 text-sm font-medium text-texto">
-                        {c.clave}
-                        {pendiente ? (
-                          <span className="text-amber-600" title="Sin enviar">•</span>
-                        ) : c.capturada ? (
-                          <CheckCircle2 size={13} className="text-primario" />
-                        ) : null}
-                      </span>
-                      <span className="truncate text-xs text-texto-tenue">
-                        Sec. {c.seccion} · {c.municipio}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        </div>
+          {/* Sus casillas, en un combo: con diez o más, una lista de botones
+              ocupa media pantalla y empuja la boleta hacia abajo. */}
+          <label className="block text-sm text-texto-tenue">
+            Casilla
+            <select
+              value={idCasilla ?? ''}
+              onChange={(e) => cambiar('id_casilla', e.target.value)}
+              disabled={asignadas.length === 0}
+              className="mt-1 w-full rounded-lg border border-borde bg-superficie px-3 py-2.5 text-base text-texto disabled:opacity-50"
+            >
+              {asignadas.length === 0 && <option value="">Sin casillas asignadas</option>}
+              {idCasilla === null && asignadas.length > 0 && (
+                <option value="">Elige casilla…</option>
+              )}
+              {asignadas.map((c) => {
+                const pendiente = pendientesPorCasilla.has(c.id)
+                const marca = pendiente ? ' •' : c.capturada ? ' ✓' : ''
+                return (
+                  <option key={c.id} value={c.id}>
+                    {c.clave} · Sec. {c.seccion}{marca}
+                  </option>
+                )
+              })}
+            </select>
+          </label>
 
+          {asignadas.length === 0 && (
+            <p className="text-xs text-texto-tenue">
+              {enLinea
+                ? 'No tienes casillas asignadas en esta elección.'
+                : 'Sin conexión y sin casillas guardadas. Prepara el teléfono con red.'}
+            </p>
+          )}
+
+          {casilla && (
+            <p className="truncate text-xs text-texto-tenue">
+              {casilla.municipio}
+              {pendientesPorCasilla.has(casilla.id)
+                ? ' · sin enviar'
+                : casilla.capturada
+                  ? ' · capturada'
+                  : ''}
+            </p>
+          )}
+        </div>
         {/* Preparación para trabajar sin señal */}
         {idProceso && (
           <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-borde bg-superficie px-4 py-3">
