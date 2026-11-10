@@ -63,12 +63,11 @@ public class DispositivoServicio {
             return new CodigoEnrolamientoDTO(id, codigo, nombre);
         }
 
-        if (dispositivos.activos(idCapturista) >= MAXIMO_TELEFONOS) {
-            throw new DatosInvalidosExcepcion(
-                    "TELEFONOS_COMPLETOS",
-                    "Ya tiene " + MAXIMO_TELEFONOS + " teléfonos. Desactiva uno antes de agregar otro.");
-        }
-
+        /*
+         * Aquí no se limita: repartir códigos por lote antes de una jornada es
+         * normal, y un código que nadie usó no es un teléfono en operación.
+         * El tope se aplica al enrolar.
+         */
         int id = dispositivos.crear(idCapturista, nombre, Pases.hash(codigo));
         return new CodigoEnrolamientoDTO(id, codigo, nombre);
     }
@@ -95,6 +94,15 @@ public class DispositivoServicio {
         int[] dispositivo = dispositivos.porCodigo(Pases.hash(limpio))
                 .orElseThrow(() -> new DatosInvalidosExcepcion(
                         "El código no es válido o ya se usó. Pide uno nuevo."));
+
+        // El tope de teléfonos se revisa aquí: es el momento en que uno entra
+        // en operación de verdad.
+        if (dispositivos.enrolados(dispositivo[1]) >= MAXIMO_TELEFONOS) {
+            throw new DatosInvalidosExcepcion(
+                    "TELEFONOS_COMPLETOS",
+                    "Esta persona ya tiene " + MAXIMO_TELEFONOS
+                            + " teléfonos enrolados. Desactiva uno antes de enlazar otro.");
+        }
 
         String pase = Pases.nuevoPase();
         dispositivos.enrolar(dispositivo[0], Pases.hash(pase));

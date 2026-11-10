@@ -70,11 +70,16 @@ public class DispositivoRepositorio {
                 """, idCapturista, conservar);
     }
 
-    /** Cuántos teléfonos activos tiene. */
-    public int activos(int idCapturista) {
+    /**
+     * Cuántos teléfonos están enrolados y activos.
+     *
+     * Se cuentan los enrolados, no los códigos generados: un código repartido
+     * que nadie usó todavía no es un teléfono en operación.
+     */
+    public int enrolados(int idCapturista) {
         Integer n = jdbc.queryForObject("""
                 SELECT count(*) FROM sirve.dispositivo
-                 WHERE id_capturista = ? AND activo
+                 WHERE id_capturista = ? AND activo AND pase_hash IS NOT NULL
                 """, Integer.class, idCapturista);
         return n == null ? 0 : n;
     }
