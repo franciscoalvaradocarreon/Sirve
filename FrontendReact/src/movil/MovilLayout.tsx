@@ -94,7 +94,20 @@ export function MovilLayout() {
       <header className="sticky top-0 z-10 border-b border-borde bg-superficie/95 backdrop-blur">
         <div className="flex items-center justify-between gap-3 px-4 py-3">
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-texto">{NOMBRE_SISTEMA}</p>
+            {/* Nombre del sistema y, al lado, quién está capturando: en una
+                casilla con varios teléfonos a la mano, saber de quién es este
+                evita confusiones. */}
+            <div className="flex min-w-0 items-center gap-2">
+              <p className="shrink-0 text-sm font-semibold text-texto">{NOMBRE_SISTEMA}</p>
+              {sesion?.nombre && (
+                <span
+                  className="truncate rounded-md border border-primario/30 bg-primario/10 px-2 py-0.5 text-xs font-medium text-primario"
+                  title={sesion.nombre}
+                >
+                  {sesion.nombre}
+                </span>
+              )}
+            </div>
 
             {/* Renglón con el uso y, al lado, el proceso en curso. Va como
                 franja y no como desplegable: quien captura no lo elige, solo
