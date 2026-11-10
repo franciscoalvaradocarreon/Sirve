@@ -21,11 +21,15 @@ GRANT USAGE, SELECT
 -- repite por si la tabla cambió de dueño en el camino.
 GRANT SELECT, INSERT, UPDATE, DELETE ON sirve.captura TO "User_app", sirve_app;
 
--- Para que no vuelva a pasar: lo que se cree en adelante en el esquema
--- sirve nace con permisos para los dos roles.
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA sirve
+-- Para que no vuelva a pasar: lo que se cree en adelante en el esquema sirve
+-- nace con permisos para los dos roles.
+--
+-- Sin «FOR ROLE»: se aplica al rol con el que se ejecuta. En el servidor ese
+-- rol es User_app —el contenedor se creó con él— y no existe «postgres», así
+-- que nombrarlo hacía fallar la sentencia.
+ALTER DEFAULT PRIVILEGES IN SCHEMA sirve
     GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "User_app", sirve_app;
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA sirve
+ALTER DEFAULT PRIVILEGES IN SCHEMA sirve
     GRANT USAGE, SELECT ON SEQUENCES TO "User_app", sirve_app;
 
 COMMIT;
