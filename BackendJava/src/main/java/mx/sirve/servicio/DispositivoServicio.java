@@ -60,7 +60,7 @@ public class DispositivoServicio {
      * Si el código no existe, el mensaje es el mismo que si ya se hubiera
      * usado: no conviene decirle a nadie qué códigos son válidos.
      */
-    public EnrolamientoDTO enrolar(String codigo, int idEleccion) {
+    public EnrolamientoDTO enrolar(String codigo, Integer idEleccion) {
         String limpio = Pases.normalizarCodigo(codigo);
         if (limpio.length() < 6) {
             throw new DatosInvalidosExcepcion("El código no es válido.");
@@ -78,8 +78,12 @@ public class DispositivoServicio {
                 .map(c -> c.nombre())
                 .orElse("");
 
-        List<CasillaAsignadaDTO> casillas =
-                capturistas.casillas(idCapturista, idEleccion);
+        // La elección es opcional: al enrolar todavía no se ha elegido ninguna.
+        // Sin esta comprobación, el nulo reventaba al convertirlo a int y el
+        // enrolamiento respondía 500.
+        List<CasillaAsignadaDTO> casillas = idEleccion == null
+                ? List.of()
+                : capturistas.casillas(idCapturista, idEleccion);
 
         return new EnrolamientoDTO(pase, idCapturista, nombre, casillas);
     }
