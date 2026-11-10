@@ -73,11 +73,11 @@ CREATE INDEX IF NOT EXISTS ix_captura_capturista ON sirve.captura (id_capturista
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'sirve_app') THEN
-        GRANT SELECT, INSERT, UPDATE, DELETE ON sirve.capturista         TO sirve_app;
-        GRANT SELECT, INSERT, UPDATE, DELETE ON sirve.capturista_casilla TO sirve_app;
-        GRANT SELECT, INSERT, UPDATE, DELETE ON sirve.dispositivo        TO sirve_app;
-        GRANT USAGE, SELECT ON SEQUENCE sirve.capturista_id_seq TO sirve_app;
-        GRANT USAGE, SELECT ON SEQUENCE sirve.dispositivo_id_seq TO sirve_app;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON sirve.capturista         TO "User_app", sirve_app;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON sirve.capturista_casilla TO "User_app", sirve_app;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON sirve.dispositivo        TO "User_app", sirve_app;
+        GRANT USAGE, SELECT ON SEQUENCE sirve.capturista_id_seq TO "User_app", sirve_app;
+        GRANT USAGE, SELECT ON SEQUENCE sirve.dispositivo_id_seq TO "User_app", sirve_app;
     END IF;
 END $$;
 

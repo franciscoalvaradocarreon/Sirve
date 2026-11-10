@@ -30,7 +30,7 @@ DROP TABLE IF EXISTS sirve.capturista_casilla;
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'sirve_app') THEN
-        GRANT SELECT, INSERT, UPDATE, DELETE ON sirve.capturista_seccion TO sirve_app;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON sirve.capturista_seccion TO "User_app", sirve_app;
     END IF;
 END $$;
 
