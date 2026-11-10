@@ -184,12 +184,51 @@ docker exec sih-ia-caddy-1 caddy reload   --config /etc/caddy/Caddyfile
 
 ## Respaldos
 
-```bash
-docker exec sirve-p-db-1 pg_dump -U User_app -Fc SIRVE > sirve-$(date +%F).dump
+Automático, todos los días a las **03:00 de Nuevo León** (09:00 UTC, que es la
+hora del servidor).
+
+```
+/opt/sirve-p/respaldos/respaldo.sh     el script, versionado en el repositorio
+/etc/cron.d/sirve-respaldo             la programación
+/opt/respaldos/sirve/                  los archivos .dump
+/var/log/sirve-respaldo.log            el registro de cada corrida
 ```
 
-Restaurar:
+Qué hace en cada corrida:
+
+1. Volca la base en formato `custom` —comprimido y restaurable por tablas—.
+2. Comprueba que el archivo pese más de 1 MB, que empiece con la firma `PGDMP`
+   y que `pg_restore` pueda leer el índice. Si algo falla, **borra el archivo**
+   y termina con error: es preferible no tener respaldo a tener uno roto que
+   parezca bueno.
+3. Borra los que tengan más de **14 días**.
+
+### A mano
 
 ```bash
-cat sirve-2026-11-08.dump | docker exec -i sirve-p-db-1 pg_restore -U User_app -d SIRVE --clean
+sudo /opt/sirve-p/respaldos/respaldo.sh
+sudo tail -5 /var/log/sirve-respaldo.log
+ls -lh /opt/respaldos/sirve/
 ```
+
+### Restaurar
+
+La prueba que importa. Se restaura en una base aparte para no tocar la viva:
+
+```bash
+ARCHIVO=/opt/respaldos/sirve/sirve-2026-11-10_1800.dump
+
+docker exec sirve-p-db-1 psql -U User_app -d postgres -c 'CREATE DATABASE sirve_restore;'
+docker exec -i sirve-p-db-1 pg_restore -U User_app -d sirve_restore --no-owner --no-privileges < "$ARCHIVO"
+docker exec sirve-p-db-1 psql -U User_app -d sirve_restore -c 'select count(*) from sirve.captura;'
+docker exec sirve-p-db-1 psql -U User_app -d postgres -c 'DROP DATABASE sirve_restore;'
+```
+
+La última vez que se probó, la copia restaurada coincidió exactamente con la
+viva: 20 764 casillas, 8 773 secciones, 7 396 capturas.
+
+### Lo que este respaldo **no** cubre
+
+Vive en el mismo servidor que la base. Si se pierde el disco, se pierden los
+dos. Falta copiarlo fuera —a otro servidor, a un bucket—; con un `rclone` o un
+`scp` diario al final del script se resuelve.
