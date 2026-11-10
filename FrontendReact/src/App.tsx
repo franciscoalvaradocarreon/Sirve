@@ -10,6 +10,7 @@ import { Elecciones } from './components/Elecciones'
 import { Captura } from './components/Captura'
 import { Avance } from './components/Avance'
 import { Capturistas } from './components/Capturistas'
+import { CapturistaFormulario } from './components/CapturistaFormulario'
 import { EnConstruccion } from './components/EnConstruccion'
 import { MovilLayout } from './movil/MovilLayout'
 import { ProcesoProveedor } from './movil/ProcesoContext'
@@ -33,7 +34,7 @@ export default function App() {
             <Route path="/catalogos/casillas" element={<Casillas />} />
             <Route path="/captura" element={<Captura />} />
             <Route path="/captura/consulta" element={<EnConstruccion titulo="Consultar captura" />} />
-            <Route path="/reportes/avance" element={<Avance />} />`n            <Route path="/capturistas" element={<Capturistas />} />
+            <Route path="/reportes/avance" element={<Avance />} />`n            <Route path="/capturistas" element={<Capturistas />} />`n            <Route path="/capturistas/nuevo" element={<CapturistaFormulario />} />`n            <Route path="/capturistas/:id" element={<CapturistaFormulario />} />
           </Route>
 
           {/* Teléfono y tableta: árbol propio, sin menú lateral, con
