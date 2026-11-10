@@ -12,7 +12,7 @@
    toda la gama sin tocar clases.
    ============================================================================ */
 :root {
-  --primario: #2fb9a3;
+  --primario: #9f2241;
 
   --primario-suave: color-mix(in oklab, var(--primario) 10%, white);
   --primario-borde: color-mix(in oklab, var(--primario) 35%, white);
