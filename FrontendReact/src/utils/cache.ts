@@ -41,6 +41,23 @@ export function hayCache(clave: string): boolean {
 }
 
 /**
+ * Lee lo guardado sin tocar la red.
+ *
+ * Sin esto, al volver a una pantalla sin conexión los catálogos se pedían
+ * primero al servidor y había que esperar el tiempo de espera completo —quince
+ * segundos— antes de caer en la copia local. Durante ese rato las listas se
+ * veían vacías y parecía que se habían borrado.
+ */
+export function leerCache<T>(clave: string): T | null {
+  try {
+    const guardado = localStorage.getItem(PREFIJO + clave)
+    return guardado ? (JSON.parse(guardado) as T) : null
+  } catch {
+    return null
+  }
+}
+
+/**
  * Guarda a propósito, sin consultar antes al servidor.
  *
  * Lo usa la preparación sin conexión: se descarga el municipio entero aunque ya

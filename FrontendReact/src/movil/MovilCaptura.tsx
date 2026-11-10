@@ -11,7 +11,7 @@ import { seccionServicio } from '../api/seccionServicio'
 import { cola, type CapturaEnCola } from '../utils/cola'
 import { useProceso } from './ProcesoContext'
 import { AvisoFlotante } from './AvisoFlotante'
-import { conCache } from '../utils/cache'
+import { conCache, leerCache } from '../utils/cache'
 import { cargarConRespaldo, guardarCatalogo, hayCatalogo, leerCatalogo } from '../utils/almacen'
 import {
   claveBorrador,
@@ -147,6 +147,12 @@ export function MovilCaptura() {
   /* ------------------------------ catálogos ------------------------------ */
 
   useEffect(() => {
+    // Lo guardado se muestra de inmediato; la consulta va detrás y actualiza.
+    // Sin conexión esto es la diferencia entre ver la lista al instante y verla
+    // vacía durante quince segundos.
+    const guardado = leerCache<Proceso[]>('procesos')
+    if (guardado) setProcesos(guardado)
+
     conCache('procesos', () => procesoServicio.listar())
       .then((datos) => {
         setProcesos(datos)
@@ -171,6 +177,9 @@ export function MovilCaptura() {
 
   useEffect(() => {
     if (!idProceso) return
+    const guardadasElecciones = leerCache<Eleccion[]>(`elecciones:${idProceso}`)
+    if (guardadasElecciones) setElecciones(guardadasElecciones)
+
     conCache(`elecciones:${idProceso}`, () => procesoServicio.elecciones(idProceso))
       .then((datos) => {
         setElecciones(datos)
@@ -182,6 +191,9 @@ export function MovilCaptura() {
 
   useEffect(() => {
     if (!idProceso) return
+    const guardadosMunicipios = leerCache<Municipio[]>(`municipios:${idProceso}`)
+    if (guardadosMunicipios) setMunicipios(guardadosMunicipios)
+
     conCache(`municipios:${idProceso}`, () => municipioServicio.listar(idProceso))
       .then(setMunicipios)
       .catch(() => setAviso({ tipo: 'error', texto: 'Sin datos guardados de municipios.' }))
@@ -194,6 +206,9 @@ export function MovilCaptura() {
       setSeccionesProceso([])
       return
     }
+    leerCatalogo<Seccion[]>(`secciones:${idProceso}`).then((guardadas) => {
+      if (guardadas && guardadas.length > 0) setSeccionesProceso(guardadas)
+    })
     cargarConRespaldo(`secciones:${idProceso}`, () =>
       seccionServicio.listar(null, idProceso),
     ).then((datos) => setSeccionesProceso(datos ?? []))
@@ -300,6 +315,9 @@ export function MovilCaptura() {
       setOpciones([])
       return
     }
+    leerCatalogo<OpcionBoleta[]>(`opciones:${idEleccion}`).then((guardadas) => {
+      if (guardadas && guardadas.length > 0) setOpciones(guardadas)
+    })
     conCache(`opciones:${idEleccion}`, () => eleccionServicio.opciones(idEleccion))
       .then(setOpciones)
       .catch(() => setOpciones([]))
