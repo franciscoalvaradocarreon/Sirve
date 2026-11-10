@@ -57,6 +57,19 @@ public class DispositivoRepositorio {
         return ids.stream().findFirst();
     }
 
+    /**
+     * Borra los teléfonos pendientes sobrantes, dejando uno.
+     *
+     * Son registros de códigos generados y nunca usados. Sin esto, cada prueba
+     * deja un teléfono vacío en la lista para siempre.
+     */
+    public void depurarSinEnrolar(int idCapturista, int conservar) {
+        jdbc.update("""
+                DELETE FROM sirve.dispositivo
+                 WHERE id_capturista = ? AND pase_hash IS NULL AND id <> ?
+                """, idCapturista, conservar);
+    }
+
     /** Cuántos teléfonos activos tiene. */
     public int activos(int idCapturista) {
         Integer n = jdbc.queryForObject("""

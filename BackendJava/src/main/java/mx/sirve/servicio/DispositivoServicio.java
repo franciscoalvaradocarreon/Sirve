@@ -58,6 +58,8 @@ public class DispositivoServicio {
         if (pendiente.isPresent()) {
             int id = pendiente.get();
             dispositivos.reemitir(id, Pases.hash(codigo));
+            // Los que quedaron de pruebas anteriores no sirven para nada.
+            dispositivos.depurarSinEnrolar(idCapturista, id);
             return new CodigoEnrolamientoDTO(id, codigo, nombre);
         }
 
