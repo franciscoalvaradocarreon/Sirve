@@ -1,14 +1,18 @@
 import axios, { AxiosError } from 'axios'
 import type { ErrorContrato } from '../types'
+import { leerPase } from '../utils/sesion'
 
 /**
  * Cliente HTTP único.
  *
  * En desarrollo, Vite reenvía /api al backend (ver vite.config.ts). En
- * producción el front va dentro del WAR y comparte origen, así que la misma
+ * producción el front va dentro del jar y comparte origen, así que la misma
  * base sirve en los dos entornos.
  *
- * El interceptor convierte el error del contrato en un Error normal con
+ * El interceptor de petición pega el pase del teléfono, si lo hay. Va aquí y
+ * no en cada pantalla para que ninguna llamada se quede sin él por descuido.
+ *
+ * El de respuesta convierte el error del contrato en un Error normal con
  * codigo y estado, para que las pantallas no tengan que conocer axios.
  */
 export const cliente = axios.create({
@@ -28,6 +32,14 @@ export class ErrorApi extends Error {
     this.codigo = codigo
   }
 }
+
+cliente.interceptors.request.use((configuracion) => {
+  const pase = leerPase()
+  if (pase) {
+    configuracion.headers.Authorization = `Bearer ${pase}`
+  }
+  return configuracion
+})
 
 cliente.interceptors.response.use(
   (respuesta) => respuesta,

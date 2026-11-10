@@ -10,6 +10,8 @@ import {
   leerTextoGrande,
 } from '../utils/texto'
 import { useProceso } from './ProcesoContext'
+import { EnrolamientoMovil } from './EnrolamientoMovil'
+import { leerSesion } from '../utils/sesion'
 
 /**
  * Armazón de las pantallas móviles.
@@ -25,6 +27,7 @@ export function MovilLayout() {
   const [enLinea, setEnLinea] = useState(navigator.onLine)
   const [pendientes, setPendientes] = useState(0)
   const [textoGrande, setTextoGrande] = useState(leerTextoGrande())
+  const [sesion, setSesion] = useState(leerSesion())
   const { proceso } = useProceso()
 
   const alternarTexto = () => {
@@ -73,6 +76,18 @@ export function MovilLayout() {
     `flex flex-1 flex-col items-center gap-1 py-2 text-xs transition-colors ${
       isActive ? 'text-primario' : 'text-texto-tenue'
     }`
+
+  /*
+   * Sin pase no hay aplicación: lo primero es enlazar el teléfono. Es lo
+   * único que se pide, una sola vez, y sustituye a cualquier inicio de sesión.
+   */
+  if (!sesion) {
+    return (
+      <div className="min-h-dvh bg-fondo">
+        <EnrolamientoMovil alEnrolar={() => setSesion(leerSesion())} />
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-dvh flex-col bg-fondo">

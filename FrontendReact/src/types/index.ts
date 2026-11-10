@@ -148,3 +148,49 @@ export interface AvanceResumen {
 
 /** Cómo se agrupa el reporte de avance. */
 export type AgrupacionAvance = 'municipio' | 'distrito_local' | 'distrito_federal'
+
+/** Casilla asignada a un capturista, tal como la ve el teléfono. */
+export interface CasillaAsignada {
+  id: number
+  clave: string
+  tipo: string
+  seccion: string
+  municipio: string
+  capturada: boolean
+}
+
+/** Respuesta del enrolamiento: el pase y lo que ese teléfono puede capturar. */
+export interface Enrolamiento {
+  pase: string
+  id_capturista: number
+  nombre: string
+  casillas: CasillaAsignada[]
+}
+
+/** Persona que captura, con sus casillas asignadas. */
+export interface Capturista {
+  id: number
+  nombre: string
+  telefono: string | null
+  activo: boolean
+  casillas: number
+  asignadas: CasillaAsignada[]
+  creado_en: string
+}
+
+/** Teléfono enrolado de un capturista. Nunca trae el pase. */
+export interface Telefono {
+  id: number
+  nombre: string | null
+  activo: boolean
+  enrolado: boolean
+  enrolado_en: string | null
+  ultimo_uso: string | null
+}
+
+/** Código de enrolamiento recién generado. */
+export interface CodigoEnrolamiento {
+  id_dispositivo: number
+  codigo: string
+  nombre: string | null
+}

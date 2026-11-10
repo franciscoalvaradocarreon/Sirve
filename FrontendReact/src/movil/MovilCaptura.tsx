@@ -3,15 +3,11 @@ import { useSearchParams } from 'react-router-dom'
 import { CheckCircle2, CloudOff, Download, Save, TriangleAlert } from 'lucide-react'
 import { ErrorApi } from '../api/cliente'
 import { capturaServicio } from '../api/capturaServicio'
-import { casillaServicio } from '../api/casillaServicio'
+import { dispositivoServicio } from '../api/dispositivoServicio'
 import { eleccionServicio } from '../api/eleccionServicio'
-import { municipioServicio } from '../api/municipioServicio'
 import { procesoServicio } from '../api/procesoServicio'
-import { seccionServicio } from '../api/seccionServicio'
 import { cola, type CapturaEnCola } from '../utils/cola'
-import { useProceso } from './ProcesoContext'
-import { AvisoFlotante } from './AvisoFlotante'
-import { conCache, leerCache } from '../utils/cache'
+import { leerCache } from '../utils/cache'
 import { cargarConRespaldo, guardarCatalogo, hayCatalogo, leerCatalogo } from '../utils/almacen'
 import {
   claveBorrador,
@@ -20,72 +16,65 @@ import {
   limpiarBorrador,
 } from '../utils/borrador'
 import { nuevoUuid } from '../utils/uuid'
+import { useProceso } from './ProcesoContext'
+import { AvisoFlotante } from './AvisoFlotante'
 import type {
-  Casilla,
+  CasillaAsignada,
   Eleccion,
-  Municipio,
   OpcionBoleta,
   Proceso,
-  Seccion,
 } from '../types'
 
 /**
  * Captura en el teléfono.
  *
- * Es una pantalla aparte de la de escritorio, no la misma adaptada: aquí todo
- * va en una columna, los campos son grandes y el resumen queda fijo abajo.
+ * El capturista no elige municipio ni sección: ve la lista de sus casillas,
+ * que le asignaron al darlo de alta. Diez, doce, las que le toquen.
  *
- * Funciona sin conexión. Los catálogos se guardan al consultarlos y las
- * capturas que no se pueden enviar se encolan en el teléfono con su
- * identificador de cliente, así que reenviarlas después no duplica nada.
+ * Funciona sin conexión. La preparación baja solo lo suyo —sus casillas y la
+ * boleta de cada elección—, así que son kilobytes y no megabytes.
  */
-const CLAVE_ULTIMA_SELECCION = 'sirve:ultimaSeleccion'
-
 export function MovilCaptura() {
   const [parametros, setParametros] = useSearchParams()
-
-  const [enLinea, setEnLinea] = useState(navigator.onLine)
   const { setProceso } = useProceso()
 
   const [procesos, setProcesos] = useState<Proceso[]>([])
   const [elecciones, setElecciones] = useState<Eleccion[]>([])
-  const [municipios, setMunicipios] = useState<Municipio[]>([])
-  const [seccionesProceso, setSeccionesProceso] = useState<Seccion[]>([])
-  const [casillasEleccion, setCasillasEleccion] = useState<Casilla[]>([])
-  const [casillasSeccion, setCasillasSeccion] = useState<Casilla[]>([])
-  const [descargado, setDescargado] = useState(false)
-  /** Capturas que están en el teléfono sin enviar. */
-  const [enCola, setEnCola] = useState<CapturaEnCola[]>([])
   const [opciones, setOpciones] = useState<OpcionBoleta[]>([])
+  const [asignadas, setAsignadas] = useState<CasillaAsignada[]>([])
 
   const [votos, setVotos] = useState<Record<number, string>>({})
   const [totalActa, setTotalActa] = useState('')
   const [nulos, setNulos] = useState('')
   const [noRegistrados, setNoRegistrados] = useState('')
 
+  const [enLinea, setEnLinea] = useState(navigator.onLine)
   const [guardando, setGuardando] = useState(false)
   const [preparando, setPreparando] = useState(false)
   const [progreso, setProgreso] = useState<string | null>(null)
-  /** Qué piezas del proceso están guardadas en el teléfono. */
-  const [piezas, setPiezas] = useState({ secciones: false, listas: 0, total: 0 })
+  const [piezas, setPiezas] = useState({ listas: 0, total: 0 })
+  const [enCola, setEnCola] = useState<CapturaEnCola[]>([])
   const [aviso, setAviso] = useState<
     { tipo: 'ok' | 'cola' | 'info' | 'error'; texto: string } | null
   >(null)
 
   const idProceso = Number(parametros.get('id_proceso')) || null
   const idEleccion = Number(parametros.get('id_eleccion')) || null
-  const idMunicipio = Number(parametros.get('id_municipio')) || null
-  const claveSeccion = parametros.get('seccion') ?? ''
   const idCasilla = Number(parametros.get('id_casilla')) || null
 
   const proceso = procesos.find((p) => p.id === idProceso) ?? null
-
   const eleccion = elecciones.find((e) => e.id === idEleccion) ?? null
+  const casilla = asignadas.find((c) => c.id === idCasilla) ?? null
 
-  // La barra superior muestra el proceso; esta pantalla es quien lo conoce.
   useEffect(() => {
-    setProceso(proceso)
-  }, [proceso, setProceso])
+    const alCambiar = () => setEnLinea(navigator.onLine)
+    window.addEventListener('online', alCambiar)
+    window.addEventListener('offline', alCambiar)
+    return () => {
+      window.removeEventListener('online', alCambiar)
+      window.removeEventListener('offline', alCambiar)
+    }
+  }, [])
 
   const entero = (v: string) => {
     const n = Number(v)
@@ -114,56 +103,18 @@ export function MovilCaptura() {
     )
   }
 
-  /* --------------------------- última selección --------------------------- */
-
-  /*
-   * La selección vive en la URL, y la URL se pierde al cambiar de pestaña:
-   * volver de «Pendientes» dejaba los combos en blanco y había que empezar de
-   * nuevo. Se guarda la última combinación y se restaura al volver sin
-   * parámetros.
-   *
-   * En sessionStorage y no en localStorage: es la casilla en la que se estaba
-   * trabajando hoy, no una preferencia permanente.
-   */
-  useEffect(() => {
-    const actual = parametros.toString()
-    if (!actual) return
-    try {
-      sessionStorage.setItem(CLAVE_ULTIMA_SELECCION, actual)
-    } catch {
-      // Sin almacenamiento: solo se pierde la comodidad de volver al mismo sitio.
-    }
-  }, [parametros])
-
-  useEffect(() => {
-    if (parametros.toString()) return
-    try {
-      const guardada = sessionStorage.getItem(CLAVE_ULTIMA_SELECCION)
-      if (guardada) setParametros(new URLSearchParams(guardada), { replace: true })
-    } catch {
-      // Nada guardado.
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
   /* ------------------------------ catálogos ------------------------------ */
 
   useEffect(() => {
-    // Lo guardado se muestra de inmediato; la consulta va detrás y actualiza.
-    // Sin conexión esto es la diferencia entre ver la lista al instante y verla
-    // vacía durante quince segundos.
     const guardado = leerCache<Proceso[]>('procesos')
     if (guardado) setProcesos(guardado)
 
-    conCache('procesos', () => procesoServicio.listar())
+    cargarConRespaldo('procesos', () => procesoServicio.listar())
       .then((datos) => {
+        if (!datos) return
         setProcesos(datos)
         if (!idProceso && datos.length > 0) {
           const activo = datos.find((p) => p.activo) ?? datos[0]
-          // Se comprueba dentro del actualizador y no fuera: la selección
-          // guardada puede haberse restaurado entre el primer dibujo y esta
-          // respuesta, y pisarla devolvería al usuario a otro proceso del que
-          // estaba usando.
           setParametros(
             (prev) => {
               if (!prev.get('id_proceso')) prev.set('id_proceso', String(activo.id))
@@ -173,159 +124,30 @@ export function MovilCaptura() {
           )
         }
       })
-      .catch(() => setAviso({ tipo: 'error', texto: 'Sin datos guardados de procesos.' }))
+      .catch(() => setAviso({ tipo: 'error', texto: 'Sin datos guardados del proceso.' }))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
     if (!idProceso) return
-    const guardadasElecciones = leerCache<Eleccion[]>(`elecciones:${idProceso}`)
-    if (guardadasElecciones) setElecciones(guardadasElecciones)
+    const guardadas = leerCache<Eleccion[]>(`elecciones:${idProceso}`)
+    if (guardadas) setElecciones(guardadas)
 
-    conCache(`elecciones:${idProceso}`, () => procesoServicio.elecciones(idProceso))
-      .then((datos) => {
-        setElecciones(datos)
-        if (!idEleccion && datos.length > 0) cambiar('id_eleccion', String(datos[0].id))
-      })
-      .catch(() => setAviso({ tipo: 'error', texto: 'Sin datos guardados de elecciones.' }))
+    cargarConRespaldo(`elecciones:${idProceso}`, () =>
+      procesoServicio.elecciones(idProceso),
+    ).then((datos) => {
+      if (!datos) return
+      setElecciones(datos)
+      if (!idEleccion && datos.length > 0) cambiar('id_eleccion', String(datos[0].id))
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idProceso])
 
   useEffect(() => {
-    if (!idProceso) return
-    const guardadosMunicipios = leerCache<Municipio[]>(`municipios:${idProceso}`)
-    if (guardadosMunicipios) setMunicipios(guardadosMunicipios)
+    setProceso(proceso)
+  }, [proceso, setProceso])
 
-    conCache(`municipios:${idProceso}`, () => municipioServicio.listar(idProceso))
-      .then(setMunicipios)
-      .catch(() => setAviso({ tipo: 'error', texto: 'Sin datos guardados de municipios.' }))
-  }, [idProceso])
-
-  // Secciones de todo el proceso, no de un municipio: son unas tres mil filas
-  // y así el teléfono queda listo para cualquier municipio sin volver a pedir.
-  useEffect(() => {
-    if (!idProceso) {
-      setSeccionesProceso([])
-      return
-    }
-    leerCatalogo<Seccion[]>(`secciones:${idProceso}`).then((guardadas) => {
-      if (guardadas && guardadas.length > 0) setSeccionesProceso(guardadas)
-    })
-    cargarConRespaldo(`secciones:${idProceso}`, () =>
-      seccionServicio.listar(null, idProceso),
-    ).then((datos) => setSeccionesProceso(datos ?? []))
-  }, [idProceso])
-
-  /** Las del municipio elegido, filtradas en memoria. */
-  const secciones = useMemo(
-    () =>
-      idMunicipio
-        ? seccionesProceso.filter((s) => s.id_municipio === idMunicipio)
-        : [],
-    [seccionesProceso, idMunicipio],
-  )
-
-  /*
-   * Casillas de todo el municipio, no de la sección.
-   *
-   * Antes se pedían por sección, y eso hacía imposible trabajar sin señal: la
-   * casilla elegida podía no haberse consultado nunca. Con el municipio
-   * completo —una sola petición, unos cientos de filas— queda guardado en el
-   * teléfono, y al elegir sección se filtra en memoria sin tocar la red.
-   */
-  /*
-   * ¿Qué le falta al teléfono para trabajar este proceso sin señal?
-   *
-   * Se mira por piezas y por elección, no en bloque. Antes la comprobación era
-   * solo de la elección abierta, así que cambiar de elección parecía borrar lo
-   * descargado: en realidad la preparación se había hecho para otra.
-   */
-  useEffect(() => {
-    if (!idProceso) {
-      setPiezas({ secciones: false, listas: 0, total: 0 })
-      return
-    }
-    let vigente = true
-    ;(async () => {
-      const secciones = await hayCatalogo(`secciones:${idProceso}`).catch(() => false)
-      let listas = 0
-      for (const el of elecciones) {
-        const [c, o] = await Promise.all([
-          hayCatalogo(`casillas:${el.id}`).catch(() => false),
-          hayCatalogo(`opciones:${el.id}`).catch(() => false),
-        ])
-        if (c && o) listas += 1
-      }
-      if (vigente) setPiezas({ secciones, listas, total: elecciones.length })
-    })()
-    return () => {
-      vigente = false
-    }
-  }, [idProceso, elecciones, casillasEleccion, opciones, seccionesProceso])
-
-  const listoSinConexion =
-    piezas.secciones && piezas.total > 0 && piezas.listas === piezas.total
-
-  /*
-   * Casillas: dos caminos, según lo que haya en el teléfono.
-   *
-   * Todo el proceso pesa unos 2 MB. Bajarlo en cada cambio de elección sería
-   * un abuso de los datos del usuario, así que solo se descarga cuando se pide
-   * con «Preparar».
-   *
-   * Mientras no esté descargado se piden las de la sección elegida —unos
-   * kilobytes— y así se puede capturar con red sin preparar nada. Si ya está
-   * descargado, todo sale de la copia local y no se toca la red.
-   */
-  useEffect(() => {
-    if (!idEleccion) {
-      setCasillasEleccion([])
-      setDescargado(false)
-      return
-    }
-    let vigente = true
-    leerCatalogo<Casilla[]>(`casillas:${idEleccion}`).then((guardadas) => {
-      if (!vigente) return
-      if (guardadas && guardadas.length > 0) {
-        setCasillasEleccion(guardadas)
-        setDescargado(true)
-      } else {
-        setCasillasEleccion([])
-        setDescargado(false)
-      }
-    })
-    return () => {
-      vigente = false
-    }
-  }, [idEleccion])
-
-  /** Sección suelta, solo cuando el proceso completo no está descargado. */
-  useEffect(() => {
-    if (!idEleccion || !claveSeccion || descargado) {
-      setCasillasSeccion([])
-      return
-    }
-    conCache(`casillas:${idEleccion}:${claveSeccion}`, () =>
-      casillaServicio.listar(idEleccion, { seccion: claveSeccion }),
-    )
-      .then(setCasillasSeccion)
-      .catch(() => setCasillasSeccion([]))
-  }, [idEleccion, claveSeccion, descargado])
-
-  const casillas = useMemo(() => {
-    const origen = descargado ? casillasEleccion : casillasSeccion
-    return claveSeccion ? origen.filter((c) => c.seccion === claveSeccion) : []
-  }, [descargado, casillasEleccion, casillasSeccion, claveSeccion])
-
-  const casilla = casillas.find((c) => c.id === idCasilla) ?? null
-
-  useEffect(() => {
-    if (casillas.length > 0 && !casillas.some((c) => c.id === idCasilla)) {
-      cambiar('id_casilla', String(casillas[0].id))
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [casillas])
-
+  /** Boleta de la elección. */
   useEffect(() => {
     if (!idEleccion) {
       setOpciones([])
@@ -334,10 +156,54 @@ export function MovilCaptura() {
     leerCatalogo<OpcionBoleta[]>(`opciones:${idEleccion}`).then((guardadas) => {
       if (guardadas && guardadas.length > 0) setOpciones(guardadas)
     })
-    conCache(`opciones:${idEleccion}`, () => eleccionServicio.opciones(idEleccion))
-      .then(setOpciones)
-      .catch(() => setOpciones([]))
+    cargarConRespaldo(`opciones:${idEleccion}`, () =>
+      eleccionServicio.opciones(idEleccion),
+    ).then((datos) => {
+      if (datos) setOpciones(datos)
+    })
   }, [idEleccion])
+
+  /** Las casillas de este teléfono: lo único que puede capturar. */
+  useEffect(() => {
+    if (!idEleccion) {
+      setAsignadas([])
+      return
+    }
+    leerCatalogo<CasillaAsignada[]>(`mias:${idEleccion}`).then((guardadas) => {
+      if (guardadas && guardadas.length > 0) setAsignadas(guardadas)
+    })
+    cargarConRespaldo(`mias:${idEleccion}`, () =>
+      dispositivoServicio.misCasillas(idEleccion),
+    ).then((datos) => {
+      if (datos) setAsignadas(datos)
+    })
+  }, [idEleccion])
+
+  /* --------------------------- qué está guardado -------------------------- */
+
+  useEffect(() => {
+    if (!idProceso) {
+      setPiezas({ listas: 0, total: 0 })
+      return
+    }
+    let vigente = true
+    ;(async () => {
+      let listas = 0
+      for (const el of elecciones) {
+        const [c, o] = await Promise.all([
+          hayCatalogo(`mias:${el.id}`).catch(() => false),
+          hayCatalogo(`opciones:${el.id}`).catch(() => false),
+        ])
+        if (c && o) listas += 1
+      }
+      if (vigente) setPiezas({ listas, total: elecciones.length })
+    })()
+    return () => {
+      vigente = false
+    }
+  }, [idProceso, elecciones, asignadas, opciones])
+
+  const listoSinConexion = piezas.total > 0 && piezas.listas === piezas.total
 
   /* ------------------------- capturas sin enviar ------------------------- */
 
@@ -349,7 +215,7 @@ export function MovilCaptura() {
     recargarCola()
   }, [idCasilla, idEleccion])
 
-  /** Casillas de esta elección que tienen captura esperando en el teléfono. */
+  /** Casillas con algo esperando en el teléfono. */
   const pendientesPorCasilla = useMemo(
     () =>
       new Set(
@@ -359,7 +225,6 @@ export function MovilCaptura() {
       ),
     [enCola, idEleccion],
   )
-
 
   /* --------------------------- captura existente -------------------------- */
 
@@ -374,14 +239,8 @@ export function MovilCaptura() {
     let vigente = true
 
     ;(async () => {
-      /*
-       * Primero se mira el teléfono, no el servidor.
-       *
-       * Una captura hecha sin conexión vive en la cola, y el servidor no sabe
-       * nada de ella: consultarlo primero mostraba el formulario vacío y daba
-       * la impresión de que no se había guardado. Lo que está en el teléfono
-       * es más reciente, así que manda.
-       */
+      // Primero el teléfono: una captura hecha sin conexión vive en la cola y
+      // el servidor no sabe de ella.
       const enEspera = await cola.buscar(idCasilla, idEleccion).catch(() => null)
       if (!vigente) return
 
@@ -414,10 +273,8 @@ export function MovilCaptura() {
         setTotalActa(String(c.total_acta))
         setNulos(String(c.nulos))
         setNoRegistrados(String(c.no_registrados))
-        setAviso({ tipo: 'info', texto: 'Esta casilla ya tiene acta capturada. Al guardar se reemplaza.' })
+        setAviso({ tipo: 'info', texto: 'Esta casilla ya tiene acta. Al guardar se reemplaza.' })
       } catch {
-        // 404 es lo normal: todavía no hay captura. Puede haber un borrador:
-        // lo escrito antes de refrescar la pantalla o de quedarse sin batería.
         if (!vigente) return
         const borrador = leerBorrador(claveBorrador(idCasilla, idEleccion))
         if (!borrador) return
@@ -434,18 +291,11 @@ export function MovilCaptura() {
     }
   }, [idCasilla, idEleccion])
 
-  /*
-   * Borrador: se guarda conforme se escribe.
-   *
-   * Refrescar la pantalla —o que el teléfono cierre la pestaña por falta de
-   * memoria— borraba los votos ya escritos. Con esto se recuperan al volver,
-   * siempre que la captura no esté todavía en el servidor.
-   */
+  /** Borrador: se guarda conforme se escribe. */
   useEffect(() => {
     if (!idCasilla || !idEleccion) return
     const vacio =
-      Object.values(votos).every((v) => !v) &&
-      !totalActa && !nulos && !noRegistrados
+      Object.values(votos).every((v) => !v) && !totalActa && !nulos && !noRegistrados
     const clave = claveBorrador(idCasilla, idEleccion)
     if (vacio) {
       limpiarBorrador(clave)
@@ -457,36 +307,20 @@ export function MovilCaptura() {
   /* --------------------------- preparar sin red --------------------------- */
 
   /**
-   * Descarga a propósito todo lo que hace falta para capturar en un municipio
-   * sin señal: sus secciones, sus casillas en esa elección y la boleta.
+   * Descarga lo del capturista: sus casillas y la boleta, en cada elección.
    *
-   * No es lo mismo que la caché automática: esta sobrescribe lo guardado para
-   * que la copia del teléfono sea la más reciente antes de salir a la casilla.
+   * Son kilobytes, no los megabytes de antes: ya no hace falta el proceso
+   * entero porque él solo captura unas cuantas casillas.
    */
   async function preparar() {
     if (!idProceso) return
     setPreparando(true)
     setAviso(null)
-
     const fallos: string[] = []
 
-    // Secciones: son del proceso, no de la elección. Se bajan una vez.
-    setProgreso('secciones…')
-    try {
-      const ss = await seccionServicio.listarTodas(idProceso)
-      await guardarCatalogo(`secciones:${idProceso}`, ss)
-      setSeccionesProceso(ss)
-    } catch {
-      fallos.push('secciones')
-    }
-
-    // Y las casillas y la boleta de CADA elección del proceso: preparar una
-    // sola dejaba al usuario sin datos al cambiar de elección, que es
-    // justamente lo que pasaba.
     for (let i = 0; i < elecciones.length; i += 1) {
       const el = elecciones[i]
       setProgreso(`${i + 1}/${elecciones.length}`)
-
       try {
         const op = await eleccionServicio.opciones(el.id)
         await guardarCatalogo(`opciones:${el.id}`, op)
@@ -494,14 +328,10 @@ export function MovilCaptura() {
       } catch {
         fallos.push(`boleta de ${el.nombre}`)
       }
-
       try {
-        const cs = await casillaServicio.listarTodas(el.id)
-        await guardarCatalogo(`casillas:${el.id}`, cs)
-        if (el.id === idEleccion) {
-          setCasillasEleccion(cs)
-          setDescargado(true)
-        }
+        const mias = await dispositivoServicio.misCasillas(el.id)
+        await guardarCatalogo(`mias:${el.id}`, mias)
+        if (el.id === idEleccion) setAsignadas(mias)
       } catch {
         fallos.push(`casillas de ${el.nombre}`)
       }
@@ -511,17 +341,17 @@ export function MovilCaptura() {
     setProgreso(null)
 
     if (fallos.length === 0) {
-      setAviso({ tipo: 'ok', texto: 'Proceso listo para trabajar sin señal.' })
+      setAviso({ tipo: 'ok', texto: 'Listo para trabajar sin señal.' })
     } else {
       setAviso({
         tipo: 'error',
-        texto: `No se pudo descargar: ${fallos.join(', ')}. Vuelve a intentar con mejor conexión.`,
+        texto: `No se pudo descargar: ${fallos.join(', ')}. Revisa la conexión.`,
       })
     }
   }
+
   /* -------------------------------- guardar ------------------------------- */
 
-  /** Arma la carga útil a partir de lo que está en pantalla. */
   function datosDeCaptura() {
     if (!casilla || !idEleccion) return null
     return {
@@ -538,14 +368,12 @@ export function MovilCaptura() {
     }
   }
 
-  /** Si ya había una captura de esta casilla en la cola, se descarta. */
   async function quitarPendienteAnterior() {
     if (!idCasilla || !idEleccion) return
     const previa = await cola.buscar(idCasilla, idEleccion).catch(() => null)
     if (previa) await cola.eliminar(previa.id_cliente)
   }
 
-  /** Guarda en el teléfono sin intentar enviar. */
   async function guardarSinEnviar() {
     const datos = datosDeCaptura()
     if (!casilla || !datos) return
@@ -582,7 +410,6 @@ export function MovilCaptura() {
       limpiarBorrador(claveBorrador(datos.id_casilla, datos.id_eleccion))
       setAviso({ tipo: 'ok', texto: `Guardada: ${casilla.clave}.` })
     } catch (e) {
-      // estado 0 = no hubo respuesta: se guarda en el teléfono.
       if (e instanceof ErrorApi && e.estado === 0) {
         await cola.encolar({
           id_cliente: datos.id_cliente,
@@ -608,16 +435,6 @@ export function MovilCaptura() {
     }
   }
 
-  useEffect(() => {
-    const alCambiar = () => setEnLinea(navigator.onLine)
-    window.addEventListener('online', alCambiar)
-    window.addEventListener('offline', alCambiar)
-    return () => {
-      window.removeEventListener('online', alCambiar)
-      window.removeEventListener('offline', alCambiar)
-    }
-  }, [])
-
   const reiniciar = () => {
     if (idCasilla && idEleccion) limpiarBorrador(claveBorrador(idCasilla, idEleccion))
     const mapa: Record<number, string> = {}
@@ -631,15 +448,10 @@ export function MovilCaptura() {
     setAviso(null)
   }
 
-  const clasesCampo =
-    'w-full rounded-lg border border-borde bg-superficie px-3 py-2.5 text-base text-texto'
-
   const numeroDe = (id: number) => votos[id] ?? ''
 
   return (
     <div className="flex min-h-full flex-col">
-      {/* Confirmación flotante: un segundo y se va. El error no pasa por
-          aquí, se queda en la franja de arriba para que dé tiempo a leerlo. */}
       {aviso && (aviso.tipo === 'ok' || aviso.tipo === 'cola') && (
         <AvisoFlotante
           tipo={aviso.tipo}
@@ -648,8 +460,8 @@ export function MovilCaptura() {
           alCerrar={() => setAviso(null)}
         />
       )}
+
       <div className="flex-1 px-4 pb-6 pt-4">
-        {/* Los errores se quedan a la vista: hay que leerlos y corregir algo. */}
         {aviso && (aviso.tipo === 'error' || aviso.tipo === 'info') && (
           <div
             className={`mb-4 flex items-start gap-2 rounded-lg border p-3 text-sm ${
@@ -667,19 +479,14 @@ export function MovilCaptura() {
           </div>
         )}
 
-        {/* Selección: una columna, campos grandes.
-
-            El proceso no se elige: se toma el vigente. Quien captura en una
-            casilla no tiene por qué escogerlo, y un desplegable de más es una
-            forma de equivocarse. Solo se muestra cuál está en uso. */}
+        {/* Elección. Es lo único que el capturista elige. */}
         <div className="mb-4 space-y-3 rounded-xl border border-borde bg-superficie p-4">
-
           <label className="block text-sm text-texto-tenue">
             Elección
             <select
               value={idEleccion ?? ''}
-              onChange={(e) => cambiar('id_eleccion', e.target.value, ['seccion', 'id_casilla'])}
-              className={`mt-1 ${clasesCampo}`}
+              onChange={(e) => cambiar('id_eleccion', e.target.value, ['id_casilla'])}
+              className="mt-1 w-full rounded-lg border border-borde bg-superficie px-3 py-2.5 text-base text-texto"
             >
               {elecciones.map((e) => (
                 <option key={e.id} value={e.id}>
@@ -689,89 +496,75 @@ export function MovilCaptura() {
             </select>
           </label>
 
-          <label className="block text-sm text-texto-tenue">
-            Municipio
-            <select
-              value={idMunicipio ?? ''}
-              onChange={(e) => cambiar('id_municipio', e.target.value, ['seccion', 'id_casilla'])}
-              className={`mt-1 ${clasesCampo}`}
-            >
-              <option value="">Elige municipio</option>
-              {municipios.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.nombre}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block text-sm text-texto-tenue">
-              Sección
-              <select
-                value={claveSeccion}
-                onChange={(e) => cambiar('seccion', e.target.value, ['id_casilla'])}
-                disabled={secciones.length === 0}
-                className={`mt-1 ${clasesCampo}`}
-              >
-                <option value="">—</option>
-                {secciones.map((s) => (
-                  <option key={s.id} value={s.clave}>
-                    {s.clave}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="block text-sm text-texto-tenue">
-              Casilla
-              <select
-                value={idCasilla ?? ''}
-                onChange={(e) => cambiar('id_casilla', e.target.value)}
-                disabled={casillas.length === 0}
-                className={`mt-1 ${clasesCampo}`}
-              >
-                <option value="">—</option>
-                {casillas.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.clave}
-                    {pendientesPorCasilla.has(c.id) ? ' •' : c.capturada ? ' ✓' : ''}
-                  </option>
-                ))}
-              </select>
-            </label>
+          {/* Sus casillas, una por botón */}
+          <div>
+            <p className="mb-2 text-xs uppercase tracking-wide text-texto-tenue">
+              Mis casillas · {asignadas.length}
+            </p>
+            {asignadas.length === 0 ? (
+              <p className="py-2 text-sm text-texto-tenue">
+                {enLinea
+                  ? 'No tienes casillas asignadas en esta elección.'
+                  : 'Sin conexión y sin casillas guardadas. Prepara el teléfono con red.'}
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                {asignadas.map((c) => {
+                  const elegida = c.id === idCasilla
+                  const pendiente = pendientesPorCasilla.has(c.id)
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => cambiar('id_casilla', String(c.id))}
+                      className={`flex min-h-14 flex-col justify-center rounded-xl border px-3 py-2 text-left transition-colors ${
+                        elegida
+                          ? 'border-primario bg-primario/10'
+                          : 'border-borde bg-fondo'
+                      }`}
+                    >
+                      <span className="flex items-center gap-1 text-sm font-medium text-texto">
+                        {c.clave}
+                        {pendiente ? (
+                          <span className="text-amber-600" title="Sin enviar">•</span>
+                        ) : c.capturada ? (
+                          <CheckCircle2 size={13} className="text-primario" />
+                        ) : null}
+                      </span>
+                      <span className="truncate text-xs text-texto-tenue">
+                        Sec. {c.seccion} · {c.municipio}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Preparación para trabajar sin señal.
-
-            La preparación es del PROCESO completo: secciones una vez, y
-            casillas y boleta de cada elección. Así cambiar de elección no deja
-            al usuario sin datos. */}
+        {/* Preparación para trabajar sin señal */}
         {idProceso && (
           <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-borde bg-superficie px-4 py-3">
             <div className="min-w-0">
               <p className="flex items-center gap-1.5 text-sm text-texto">
-                {listoSinConexion && <CheckCircle2 size={15} className="shrink-0 text-primario" />}
+                {listoSinConexion && (
+                  <CheckCircle2 size={15} className="shrink-0 text-primario" />
+                )}
                 {listoSinConexion
-                  ? 'Proceso listo para trabajar sin señal'
-                  : piezas.total > 0 && piezas.listas > 0
+                  ? 'Listo para trabajar sin señal'
+                  : piezas.listas > 0
                     ? 'Preparación incompleta'
                     : 'Sin descargar en este teléfono'}
               </p>
               <p className="mt-0.5 truncate text-xs text-texto-tenue">
                 {listoSinConexion
-                  ? `${seccionesProceso.length} secciones · ${piezas.total} elecciones`
-                  : `Faltan ${piezas.total - piezas.listas} de ${piezas.total} elecciones${
-                      piezas.secciones ? '' : ' y las secciones'
-                    }`}
+                  ? `${piezas.total} elecciones · ${asignadas.length} casillas`
+                  : `Faltan ${piezas.total - piezas.listas} de ${piezas.total} elecciones`}
               </p>
             </div>
 
             <button
               onClick={() => void preparar()}
-              disabled={preparando || !enLinea}
-              title={!enLinea ? 'Hace falta conexión para descargar' : undefined}
+              disabled={preparando || !enLinea || elecciones.length === 0}
               className="flex shrink-0 items-center gap-1.5 rounded-lg border border-primario px-3 py-2 text-sm font-medium text-primario disabled:opacity-40"
             >
               <Download size={15} />
@@ -779,16 +572,8 @@ export function MovilCaptura() {
             </button>
           </div>
         )}
-        {/* Boleta en dos columnas.
-            
-            Una boleta de 2021 tiene 25 opciones: en una sola columna son más
-            de dos pantallas de scroll, y quien captura pierde el renglón donde
-            iba. En dos columnas cabe casi en una.
-            
-            Cada opción es una celda cerrada con su etiqueta a la izquierda y
-            su campo a la derecha, para que no haya duda de a cuál pertenece el
-            número. Por debajo de 360 px de ancho vuelve a una columna: ahí dos
-            partirían las etiquetas largas y el riesgo de equivocarse sube. */}
+
+        {/* Boleta en dos columnas */}
         {casilla && opciones.length > 0 && (
           <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-2">
             {opciones.map((o, i) => (
@@ -816,18 +601,14 @@ export function MovilCaptura() {
           </div>
         )}
 
-        {!casilla && (
+        {!casilla && asignadas.length > 0 && (
           <p className="px-1 py-6 text-center text-sm text-texto-tenue">
-            Elige municipio, sección y casilla para empezar.
+            Elige una casilla para capturar.
           </p>
         )}
       </div>
 
-      {/* Resumen al final del contenido, no fijo.
-
-          Fijo ocupaba casi un tercio de la pantalla y dejaba la boleta en una
-          ventana pequeña. Con la boleta en dos columnas, el resumen queda a un
-          desplazamiento corto y el espacio se aprovecha para leer los votos. */}
+      {/* Resumen al final del contenido */}
       {casilla && (
         <div className="mx-4 mb-4 rounded-xl border border-borde bg-superficie p-4">
           <div className="mb-3 grid grid-cols-3 gap-2">
@@ -885,7 +666,7 @@ export function MovilCaptura() {
 
           <div className="flex gap-2">
             <button
-              onClick={guardar}
+              onClick={() => void guardar()}
               disabled={guardando}
               className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-primario py-3 text-base font-medium text-white transition-opacity disabled:opacity-50"
             >
@@ -893,9 +674,6 @@ export function MovilCaptura() {
               {guardando ? 'Guardando…' : 'Guardar'}
             </button>
 
-            {/* Solo sin conexión, y solo para guardar en el teléfono.
-                Antes este botón llevaba a «Pendientes» y se llevaba lo
-                capturado: la pantalla se desmontaba y no quedaba nada. */}
             {!enLinea && (
               <button
                 onClick={() => void guardarSinEnviar()}
