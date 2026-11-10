@@ -34,7 +34,10 @@ export default function App() {
             <Route path="/catalogos/casillas" element={<Casillas />} />
             <Route path="/captura" element={<Captura />} />
             <Route path="/captura/consulta" element={<EnConstruccion titulo="Consultar captura" />} />
-            <Route path="/reportes/avance" element={<Avance />} />`n            <Route path="/capturistas" element={<Capturistas />} />`n            <Route path="/capturistas/nuevo" element={<CapturistaFormulario />} />`n            <Route path="/capturistas/:id" element={<CapturistaFormulario />} />
+            <Route path="/reportes/avance" element={<Avance />} />
+            <Route path="/capturistas" element={<Capturistas />} />
+            <Route path="/capturistas/nuevo" element={<CapturistaFormulario />} />
+            <Route path="/capturistas/:id" element={<CapturistaFormulario />} />
           </Route>
 
           {/* Teléfono y tableta: árbol propio, sin menú lateral, con
