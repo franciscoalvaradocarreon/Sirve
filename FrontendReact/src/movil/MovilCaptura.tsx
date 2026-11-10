@@ -65,7 +65,9 @@ export function MovilCaptura() {
 
   const [guardando, setGuardando] = useState(false)
   const [preparando, setPreparando] = useState(false)
-  const [listoSinConexion, setListoSinConexion] = useState(false)
+  const [progreso, setProgreso] = useState<string | null>(null)
+  /** Qué piezas del proceso están guardadas en el teléfono. */
+  const [piezas, setPiezas] = useState({ secciones: false, listas: 0, total: 0 })
   const [aviso, setAviso] = useState<
     { tipo: 'ok' | 'cola' | 'info' | 'error'; texto: string } | null
   >(null)
@@ -231,24 +233,38 @@ export function MovilCaptura() {
    * completo —una sola petición, unos cientos de filas— queda guardado en el
    * teléfono, y al elegir sección se filtra en memoria sin tocar la red.
    */
-  // ¿Está el proceso listo para trabajarse sin señal?
+  /*
+   * ¿Qué le falta al teléfono para trabajar este proceso sin señal?
+   *
+   * Se mira por piezas y por elección, no en bloque. Antes la comprobación era
+   * solo de la elección abierta, así que cambiar de elección parecía borrar lo
+   * descargado: en realidad la preparación se había hecho para otra.
+   */
   useEffect(() => {
-    if (!idProceso || !idEleccion) {
-      setListoSinConexion(false)
+    if (!idProceso) {
+      setPiezas({ secciones: false, listas: 0, total: 0 })
       return
     }
     let vigente = true
-    Promise.all([
-      hayCatalogo(`secciones:${idProceso}`),
-      hayCatalogo(`casillas:${idEleccion}`),
-      hayCatalogo(`opciones:${idEleccion}`),
-    ]).then(([s, c, o]) => {
-      if (vigente) setListoSinConexion(s && c && o)
-    })
+    ;(async () => {
+      const secciones = await hayCatalogo(`secciones:${idProceso}`).catch(() => false)
+      let listas = 0
+      for (const el of elecciones) {
+        const [c, o] = await Promise.all([
+          hayCatalogo(`casillas:${el.id}`).catch(() => false),
+          hayCatalogo(`opciones:${el.id}`).catch(() => false),
+        ])
+        if (c && o) listas += 1
+      }
+      if (vigente) setPiezas({ secciones, listas, total: elecciones.length })
+    })()
     return () => {
       vigente = false
     }
-  }, [idProceso, idEleccion, seccionesProceso, casillasEleccion, opciones])
+  }, [idProceso, elecciones, casillasEleccion, opciones, seccionesProceso])
+
+  const listoSinConexion =
+    piezas.secciones && piezas.total > 0 && piezas.listas === piezas.total
 
   /*
    * Casillas: dos caminos, según lo que haya en el teléfono.
@@ -448,37 +464,61 @@ export function MovilCaptura() {
    * que la copia del teléfono sea la más reciente antes de salir a la casilla.
    */
   async function preparar() {
-    if (!idProceso || !idEleccion) return
+    if (!idProceso) return
     setPreparando(true)
     setAviso(null)
+
+    const fallos: string[] = []
+
+    // Secciones: son del proceso, no de la elección. Se bajan una vez.
+    setProgreso('secciones…')
     try {
-      const ss = await seccionServicio.listar(null, idProceso)
+      const ss = await seccionServicio.listarTodas(idProceso)
       await guardarCatalogo(`secciones:${idProceso}`, ss)
-
-      const cs = await casillaServicio.listar(idEleccion)
-      await guardarCatalogo(`casillas:${idEleccion}`, cs)
-
-      const op = await eleccionServicio.opciones(idEleccion)
-      await guardarCatalogo(`opciones:${idEleccion}`, op)
-
       setSeccionesProceso(ss)
-      setCasillasEleccion(cs)
-      setOpciones(op)
-      setListoSinConexion(true)
-      setAviso({
-        tipo: 'ok',
-        texto: `Listo sin conexión: ${ss.length} secciones y ${cs.length} casillas.`,
-      })
     } catch {
+      fallos.push('secciones')
+    }
+
+    // Y las casillas y la boleta de CADA elección del proceso: preparar una
+    // sola dejaba al usuario sin datos al cambiar de elección, que es
+    // justamente lo que pasaba.
+    for (let i = 0; i < elecciones.length; i += 1) {
+      const el = elecciones[i]
+      setProgreso(`${i + 1}/${elecciones.length}`)
+
+      try {
+        const op = await eleccionServicio.opciones(el.id)
+        await guardarCatalogo(`opciones:${el.id}`, op)
+        if (el.id === idEleccion) setOpciones(op)
+      } catch {
+        fallos.push(`boleta de ${el.nombre}`)
+      }
+
+      try {
+        const cs = await casillaServicio.listarTodas(el.id)
+        await guardarCatalogo(`casillas:${el.id}`, cs)
+        if (el.id === idEleccion) {
+          setCasillasEleccion(cs)
+          setDescargado(true)
+        }
+      } catch {
+        fallos.push(`casillas de ${el.nombre}`)
+      }
+    }
+
+    setPreparando(false)
+    setProgreso(null)
+
+    if (fallos.length === 0) {
+      setAviso({ tipo: 'ok', texto: 'Proceso listo para trabajar sin señal.' })
+    } else {
       setAviso({
         tipo: 'error',
-        texto: 'No se pudo preparar. Hace falta conexión para descargarlo.',
+        texto: `No se pudo descargar: ${fallos.join(', ')}. Vuelve a intentar con mejor conexión.`,
       })
-    } finally {
-      setPreparando(false)
     }
   }
-
   /* -------------------------------- guardar ------------------------------- */
 
   /** Arma la carga útil a partir de lo que está en pantalla. */
@@ -705,22 +745,26 @@ export function MovilCaptura() {
 
         {/* Preparación para trabajar sin señal.
 
-            La caché automática solo guarda lo que ya se consultó. Este botón
-            descarga el municipio completo a propósito, para que el teléfono
-            esté listo antes de salir a la casilla. */}
-        {idProceso && idEleccion && (
+            La preparación es del PROCESO completo: secciones una vez, y
+            casillas y boleta de cada elección. Así cambiar de elección no deja
+            al usuario sin datos. */}
+        {idProceso && (
           <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-borde bg-superficie px-4 py-3">
             <div className="min-w-0">
               <p className="flex items-center gap-1.5 text-sm text-texto">
                 {listoSinConexion && <CheckCircle2 size={15} className="shrink-0 text-primario" />}
                 {listoSinConexion
                   ? 'Proceso listo para trabajar sin señal'
-                  : 'Sin descargar en este teléfono'}
+                  : piezas.total > 0 && piezas.listas > 0
+                    ? 'Preparación incompleta'
+                    : 'Sin descargar en este teléfono'}
               </p>
               <p className="mt-0.5 truncate text-xs text-texto-tenue">
                 {listoSinConexion
-                  ? `${seccionesProceso.length} secciones · ${casillasEleccion.length} casillas`
-                  : 'Descarga el proceso completo antes de salir.'}
+                  ? `${seccionesProceso.length} secciones · ${piezas.total} elecciones`
+                  : `Faltan ${piezas.total - piezas.listas} de ${piezas.total} elecciones${
+                      piezas.secciones ? '' : ' y las secciones'
+                    }`}
               </p>
             </div>
 
@@ -731,11 +775,10 @@ export function MovilCaptura() {
               className="flex shrink-0 items-center gap-1.5 rounded-lg border border-primario px-3 py-2 text-sm font-medium text-primario disabled:opacity-40"
             >
               <Download size={15} />
-              {preparando ? 'Descargando…' : listoSinConexion ? 'Actualizar' : 'Preparar'}
+              {preparando ? (progreso ?? 'Descargando…') : listoSinConexion ? 'Actualizar' : 'Preparar'}
             </button>
           </div>
         )}
-
         {/* Boleta en dos columnas.
             
             Una boleta de 2021 tiene 25 opciones: en una sola columna son más

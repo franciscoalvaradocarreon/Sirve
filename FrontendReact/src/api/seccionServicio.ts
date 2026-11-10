@@ -16,4 +16,18 @@ export const seccionServicio = {
           : { id_proceso: idProceso },
       })
     ).data,
+
+  /**
+   * Todas las secciones del proceso, con tiempo de espera largo.
+   *
+   * Son unas tres mil filas. Se usa al preparar el teléfono para trabajar sin
+   * conexión, donde una descarga cortada dejaría el proceso a medias.
+   */
+  listarTodas: async (idProceso: number): Promise<Seccion[]> =>
+    (
+      await cliente.get<Seccion[]>('/secciones', {
+        params: { id_proceso: idProceso },
+        timeout: 60000,
+      })
+    ).data,
 }
