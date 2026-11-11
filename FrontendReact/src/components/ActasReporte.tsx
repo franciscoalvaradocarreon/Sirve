@@ -147,6 +147,56 @@ export function ActasReporte() {
     activa?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' })
   }, [elegida])
 
+  /*
+   * Desplazamiento con el ratón: rueda y arrastre.
+   *
+   * La barra de desplazamiento horizontal es incómoda de encontrar y de
+   * arrastrar. Con la rueda —que es lo que la mano ya está haciendo— el
+   * carril se mueve de lado, y con el arrastre se puede llevar de un tirón.
+   * Los manejadores van como listeners nativos porque el de la rueda necesita
+   * no ser pasivo para poder frenar el desplazamiento vertical de la página.
+   */
+  useEffect(() => {
+    const carril = carrilRef.current
+    if (!carril) return
+
+    const alRodar = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return
+      carril.scrollLeft += e.deltaY
+      e.preventDefault()
+    }
+
+    let arrastrando = false
+    let inicioX = 0
+    let inicioScroll = 0
+
+    const alPresionar = (e: MouseEvent) => {
+      arrastrando = true
+      inicioX = e.pageX
+      inicioScroll = carril.scrollLeft
+    }
+    const alMover = (e: MouseEvent) => {
+      if (!arrastrando) return
+      e.preventDefault()
+      carril.scrollLeft = inicioScroll - (e.pageX - inicioX)
+    }
+    const alSoltar = () => {
+      arrastrando = false
+    }
+
+    carril.addEventListener('wheel', alRodar, { passive: false })
+    carril.addEventListener('mousedown', alPresionar)
+    window.addEventListener('mousemove', alMover)
+    window.addEventListener('mouseup', alSoltar)
+
+    return () => {
+      carril.removeEventListener('wheel', alRodar)
+      carril.removeEventListener('mousedown', alPresionar)
+      window.removeEventListener('mousemove', alMover)
+      window.removeEventListener('mouseup', alSoltar)
+    }
+  }, [])
+
   // Flechas del teclado para recorrer la galería sin usar el ratón.
   useEffect(() => {
     const alTeclear = (e: KeyboardEvent) => {
@@ -245,7 +295,7 @@ export function ActasReporte() {
       {filtradas.length > 0 && (
         <div
           ref={carrilRef}
-          className="mb-4 flex gap-1.5 overflow-x-auto pb-2 [scrollbar-width:thin]"
+          className="mb-4 flex cursor-grab gap-1.5 overflow-x-auto pb-2 active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {filtradas.map((a) => {
             const activa = a.id_casilla === elegida
