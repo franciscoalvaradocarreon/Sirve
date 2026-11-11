@@ -67,6 +67,16 @@ public class PaseFiltro extends OncePerRequestFilter {
     }
 
     private boolean requierePase(String ruta) {
+        /*
+         * Las imágenes de acta se sirven sin pase.
+         *
+         * Es una excepción consciente: el reporte de actas se consulta desde
+         * el escritorio, que hoy no tiene autenticación propia. Cuando exista,
+         * esta es la primera ruta que hay que cerrar junto con él.
+         */
+        if (ruta.startsWith("/api/actas/") && ruta.endsWith("/imagen")) {
+            return false;
+        }
         for (String protegida : PROTEGIDAS) {
             if (ruta.startsWith(protegida)) return true;
         }

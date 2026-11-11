@@ -10,6 +10,7 @@ import {
   ClipboardCheck,
   ListChecks,
   BarChart3,
+  Image,
 } from 'lucide-react'
 import type { ElementoMenu } from '../types'
 
@@ -59,6 +60,7 @@ export const MENU: ElementoMenu[] = [
     hijos: [
       { id: 'reportes-avance', etiqueta: 'Avance', ruta: '/reportes/avance', icono: BarChart3 },
       { id: 'reportes-asignacion', etiqueta: 'Asignación', ruta: '/reportes/asignacion', icono: Users },
+      { id: 'reportes-actas', etiqueta: 'Actas', ruta: '/reportes/actas', icono: Image },
     ],
   },
 ]
