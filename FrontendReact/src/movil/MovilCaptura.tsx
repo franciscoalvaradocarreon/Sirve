@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Camera, CheckCircle2, CloudOff, Download, Save, TriangleAlert } from 'lucide-react'
+import { Camera, CheckCircle2, CloudOff, Download, Save } from 'lucide-react'
 import { ErrorApi } from '../api/cliente'
 import { capturaServicio } from '../api/capturaServicio'
 import { dispositivoServicio } from '../api/dispositivoServicio'
@@ -530,33 +530,18 @@ export function MovilCaptura() {
 
   return (
     <div className="flex min-h-full flex-col">
-      {aviso && (aviso.tipo === 'ok' || aviso.tipo === 'cola') && (
+      {/* Todos los avisos son flotantes y de un segundo: confirmaciones,
+          avisos de sin conexión y errores. */}
+      {aviso && (
         <AvisoFlotante
           tipo={aviso.tipo}
           texto={aviso.texto}
-          duracionMs={aviso.tipo === 'ok' ? 1000 : 1800}
+          duracionMs={1000}
           alCerrar={() => setAviso(null)}
         />
       )}
 
       <div className="flex-1 px-4 pb-6 pt-4">
-        {aviso && (aviso.tipo === 'error' || aviso.tipo === 'info') && (
-          <div
-            className={`mb-4 flex items-start gap-2 rounded-lg border p-3 text-sm ${
-              aviso.tipo === 'error'
-                ? 'border-red-300 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300'
-                : 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300'
-            }`}
-          >
-            {aviso.tipo === 'error' ? (
-              <TriangleAlert size={16} className="mt-0.5 shrink-0" />
-            ) : (
-              <CloudOff size={16} className="mt-0.5 shrink-0" />
-            )}
-            <span>{aviso.texto}</span>
-          </div>
-        )}
-
         {/* Elección. Es lo único que el capturista elige. */}
         <div className="mb-4 space-y-3 rounded-xl border border-borde bg-superficie p-4">
           <label className="block text-sm text-texto-tenue">
