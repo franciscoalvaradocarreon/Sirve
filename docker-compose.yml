@@ -72,6 +72,11 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      # Los volúmenes nacen de root y la aplicación corre como usuario sin
+      # privilegios. Este paso, que dura un instante, los deja a nombre del
+      # usuario de la aplicación.
+      actas-permisos:
+        condition: service_completed_successfully
     volumes:
       # Las fotos de acta viven fuera de la base: son archivos, no filas.
       # Un volumen propio permite borrarlas o moverlas sin tocar los datos.
@@ -86,6 +91,18 @@ services:
     networks:
       - interna
       - proxy
+
+  # --------------------------------------------------------------------------
+  # Deja el volumen de actas a nombre del usuario de la aplicación.
+  # Se ejecuta en cada arranque y termina; no queda corriendo.
+  # --------------------------------------------------------------------------
+  actas-permisos:
+    image: eclipse-temurin:21-jre-alpine
+    user: root
+    restart: "no"
+    command: sh -c "chown -R 100:101 /datos/actas && chmod 750 /datos/actas"
+    volumes:
+      - actas:/datos/actas
 
   # --------------------------------------------------------------------------
   # Caddy SOLO para desarrollo local: en el servidor se usa el del SIH.
