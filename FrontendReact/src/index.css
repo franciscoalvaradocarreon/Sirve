@@ -19,28 +19,31 @@
   --primario-texto: color-mix(in oklab, var(--primario) 75%, black);
 
   --fondo: #ffffff;
-  --fondo-alt: #f3f6f5;
+  /* Los neutros llevan un tinte de la guinda, no un gris puro: así el color
+     de acento no se siente pegado encima sino parte de lo mismo. Es un tinte
+     muy bajo, de apenas unos grados de saturación. */
+  --fondo-alt: #f8f4f5;
   --superficie: #ffffff;
-  /* Bordes: con #e6e8e8 no se distinguían del blanco. Este tono sí marca
-     la separación sin llegar a verse duro. */
-  --borde: #d2dad8;
-  --borde-tenue: #e8edec;
-  --texto: #17201f;
-  --texto-tenue: #5f6b69;
+  /* Bordes: con un gris casi blanco no se distinguían del fondo. Este tono
+     marca la separación sin llegar a verse duro. */
+  --borde: #ddd0d4;
+  --borde-tenue: #ede5e7;
+  --texto: #1f1418;
+  --texto-tenue: #6b5b61;
 }
 
 .dark {
-  --primario-suave: color-mix(in oklab, var(--primario) 18%, #0d1413);
-  --primario-borde: color-mix(in oklab, var(--primario) 45%, #0d1413);
+  --primario-suave: color-mix(in oklab, var(--primario) 18%, #120e10);
+  --primario-borde: color-mix(in oklab, var(--primario) 45%, #120e10);
   --primario-texto: color-mix(in oklab, var(--primario) 85%, white);
 
-  --fondo: #0d1211;
-  --fondo-alt: #111817;
-  --superficie: #131b1a;
-  --borde: #2c3d3a;
-  --borde-tenue: #1d2a28;
-  --texto: #e8f0ee;
-  --texto-tenue: #93a3a0;
+  --fondo: #120e10;
+  --fondo-alt: #171214;
+  --superficie: #1b1517;
+  --borde: #3d2c32;
+  --borde-tenue: #2a2024;
+  --texto: #f0e8ea;
+  --texto-tenue: #a3969b;
 }
 
 @theme inline {
