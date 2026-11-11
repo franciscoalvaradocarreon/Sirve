@@ -58,6 +58,7 @@ export const MENU: ElementoMenu[] = [
     icono: BarChart3,
     hijos: [
       { id: 'reportes-avance', etiqueta: 'Avance', ruta: '/reportes/avance', icono: BarChart3 },
+      { id: 'reportes-asignacion', etiqueta: 'Asignación', ruta: '/reportes/asignacion', icono: Users },
     ],
   },
 ]

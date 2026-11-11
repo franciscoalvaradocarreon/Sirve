@@ -10,6 +10,7 @@ import { Elecciones } from './components/Elecciones'
 import { Captura } from './components/Captura'
 import { Avance } from './components/Avance'
 import { Capturistas } from './components/Capturistas'
+import { AsignacionReporte } from './components/AsignacionReporte'
 import { CapturistaFormulario } from './components/CapturistaFormulario'
 import { EnConstruccion } from './components/EnConstruccion'
 import { MovilLayout } from './movil/MovilLayout'
@@ -35,6 +36,7 @@ export default function App() {
             <Route path="/captura" element={<Captura />} />
             <Route path="/captura/consulta" element={<EnConstruccion titulo="Consultar captura" />} />
             <Route path="/reportes/avance" element={<Avance />} />
+            <Route path="/reportes/asignacion" element={<AsignacionReporte />} />
             <Route path="/capturistas" element={<Capturistas />} />
             <Route path="/capturistas/nuevo" element={<CapturistaFormulario />} />
             <Route path="/capturistas/:id" element={<CapturistaFormulario />} />
