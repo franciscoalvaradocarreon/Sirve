@@ -263,9 +263,9 @@ export function ActasReporte() {
       {acta && (
         <div className="rounded-xl border border-borde bg-superficie">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-borde px-4 py-2.5">
-            <p className="text-sm font-medium text-texto">
+            <p className="text-[1.75rem] font-medium leading-tight text-texto">
               Sec. {rotulo(acta)}
-              <span className="ml-2 text-xs font-normal text-texto-tenue">
+              <span className="ml-3 text-[1.5rem] font-normal text-texto-tenue">
                 {acta.municipio}
                 {acta.capturista ? ` · ${acta.capturista}` : ''}
                 {` · ${peso(acta.bytes)}`}
