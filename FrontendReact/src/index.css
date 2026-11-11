@@ -19,17 +19,17 @@
   --primario-texto: color-mix(in oklab, var(--primario) 75%, black);
 
   --fondo: #ffffff;
-  /* Los neutros llevan un tinte de la guinda, no un gris puro: así el color
-     de acento no se siente pegado encima sino parte de lo mismo. Es un tinte
-     muy bajo, de apenas unos grados de saturación. */
-  --fondo-alt: #f8f4f5;
+  /* Los neutros llevan el tinte de la guinda con más presencia: el fondo
+     alterno y los bordes se distinguen a simple vista, sin llegar a leerse
+     como rosa. */
+  --fondo-alt: #f4eaec;
   --superficie: #ffffff;
-  /* Bordes: con un gris casi blanco no se distinguían del fondo. Este tono
-     marca la separación sin llegar a verse duro. */
-  --borde: #ddd0d4;
-  --borde-tenue: #ede5e7;
-  --texto: #1f1418;
-  --texto-tenue: #6b5b61;
+  /* Borde con 1.9:1 contra el blanco: marca la separación de una tarjeta
+     sin necesidad de sombra. */
+  --borde: #cdb9c0;
+  --borde-tenue: #e4d7db;
+  --texto: #1d1216;
+  --texto-tenue: #5e4c53;
 }
 
 .dark {
