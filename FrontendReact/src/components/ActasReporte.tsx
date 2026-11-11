@@ -43,6 +43,14 @@ export function ActasReporte() {
   const idEleccion = Number(parametros.get('id_eleccion')) || null
 
   const numero = (n: number) => n.toLocaleString('es-MX')
+
+  /**
+   * Rótulo «sección-casilla».
+   *
+   * Se toma el tipo del servidor; si no viniera —un backend anterior a este
+   * cambio— se saca de la clave completa, que termina en el tipo: …-1474-B.
+   */
+  const rotulo = (a: Acta) => `${a.seccion}-${a.tipo ?? a.casilla.split('-').pop()}`
   const peso = (bytes: number) =>
     bytes < 1024 * 1024
       ? `${Math.round(bytes / 1024)} KB`
@@ -218,7 +226,7 @@ export function ActasReporte() {
 
       {/* Galería de miniaturas */}
       {filtradas.length > 0 && (
-        <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+        <div className="mb-4 grid grid-cols-4 gap-1.5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10">
           {filtradas.map((a) => {
             const activa = a.id_casilla === elegida
             return (
@@ -239,11 +247,11 @@ export function ActasReporte() {
                   className="aspect-[4/3] w-full bg-fondo-alt object-cover"
                 />
                 <span
-                  className={`block truncate px-2 py-1.5 text-xs font-medium ${
+                  className={`block truncate px-1.5 py-1 text-[11px] font-medium ${
                     activa ? 'bg-primario/10 text-primario' : 'bg-superficie text-texto'
                   }`}
                 >
-                  {a.seccion}-{a.tipo}
+                  {rotulo(a)}
                 </span>
               </button>
             )
@@ -256,7 +264,7 @@ export function ActasReporte() {
         <div className="rounded-xl border border-borde bg-superficie">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-borde px-4 py-2.5">
             <p className="text-sm font-medium text-texto">
-              Sec. {acta.seccion}-{acta.tipo}
+              Sec. {rotulo(acta)}
               <span className="ml-2 text-xs font-normal text-texto-tenue">
                 {acta.municipio}
                 {acta.capturista ? ` · ${acta.capturista}` : ''}
