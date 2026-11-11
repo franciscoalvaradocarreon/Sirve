@@ -56,6 +56,8 @@ export function MovilCaptura() {
   const [progreso, setProgreso] = useState<string | null>(null)
   const [piezas, setPiezas] = useState({ listas: 0, total: 0 })
   const [enCola, setEnCola] = useState<CapturaEnCola[]>([])
+  /** Foto elegida que todavía no se ha subido: espera al botón Guardar. */
+  const [fotoNueva, setFotoNueva] = useState<Blob | null>(null)
   const [fotoEstado, setFotoEstado] = useState<'ninguna' | 'porEnviar' | 'enviada'>('ninguna')
   const [fotoVista, setFotoVista] = useState<string | null>(null)
   const [fotoCargando, setFotoCargando] = useState(false)
@@ -306,6 +308,9 @@ export function MovilCaptura() {
   useEffect(() => {
     setFotoEstado('ninguna')
     setFotoVista(null)
+    // Cambiar de casilla descarta la foto elegida que no se guardó: pertenecía
+    // a la casilla anterior.
+    setFotoNueva(null)
     if (!idCasilla || !idEleccion) return
 
     let vigente = true
@@ -327,41 +332,21 @@ export function MovilCaptura() {
     }
   }, [idCasilla, idEleccion])
 
+  /**
+   * Toma la foto y la deja lista, sin subirla.
+   *
+   * Se comprime aquí para que el peso esté resuelto, pero el envío espera al
+   * botón Guardar: la foto pertenece al acta, y subirla antes de guardar los
+   * resultados dejaría una imagen sin captura.
+   */
   async function elegirFoto(archivo: File) {
     if (!idCasilla || !idEleccion) return
     setFotoCargando(true)
     setAviso(null)
     try {
       const comprimida = await comprimirFoto(archivo)
+      setFotoNueva(comprimida)
       setFotoVista(URL.createObjectURL(comprimida))
-
-      try {
-        await fotoServicio.subir(idCasilla, idEleccion, comprimida)
-        await colaFotos.eliminar(idCasilla, idEleccion)
-        setFotoEstado('enviada')
-        setAviso({ tipo: 'ok', texto: 'Foto del acta enviada.' })
-      } catch (e) {
-        if (e instanceof ErrorApi && e.estado === 0) {
-          await colaFotos.guardar({
-            clave: `${idCasilla}:${idEleccion}`,
-            idCasilla,
-            idEleccion,
-            archivo: comprimida,
-            creado: Date.now(),
-          })
-          setFotoEstado('porEnviar')
-          setAviso({
-            tipo: 'cola',
-            texto: 'Foto guardada en el teléfono. Se enviará al recuperar la conexión.',
-          })
-        } else {
-          setFotoEstado('ninguna')
-          setAviso({
-            tipo: 'error',
-            texto: e instanceof Error ? e.message : 'No se pudo subir la foto',
-          })
-        }
-      }
     } catch {
       setAviso({ tipo: 'error', texto: 'No se pudo leer la imagen.' })
     } finally {
@@ -369,6 +354,33 @@ export function MovilCaptura() {
     }
   }
 
+  /** Sube la foto elegida, o la deja en la cola si no hay red. */
+  async function subirFotoPendiente() {
+    if (!fotoNueva || !idCasilla || !idEleccion) return
+    try {
+      await fotoServicio.subir(idCasilla, idEleccion, fotoNueva)
+      await colaFotos.eliminar(idCasilla, idEleccion)
+      setFotoNueva(null)
+      setFotoEstado('enviada')
+    } catch (e) {
+      if (e instanceof ErrorApi && e.estado === 0) {
+        await colaFotos.guardar({
+          clave: `${idCasilla}:${idEleccion}`,
+          idCasilla,
+          idEleccion,
+          archivo: fotoNueva,
+          creado: Date.now(),
+        })
+        setFotoNueva(null)
+        setFotoEstado('porEnviar')
+      } else {
+        setAviso({
+          tipo: 'error',
+          texto: e instanceof Error ? e.message : 'No se pudo subir la foto',
+        })
+      }
+    }
+  }
   /** Borrador: se guarda conforme se escribe. */
   useEffect(() => {
     if (!idCasilla || !idEleccion) return
@@ -464,6 +476,7 @@ export function MovilCaptura() {
       datos,
       intentos: 0,
     })
+    await subirFotoPendiente()
     setAviso({
       tipo: 'cola',
       texto: 'Guardada en el teléfono. Se enviará al recuperar la conexión.',
@@ -486,6 +499,8 @@ export function MovilCaptura() {
     try {
       await capturaServicio.guardar(datos)
       limpiarBorrador(claveBorrador(datos.id_casilla, datos.id_eleccion))
+      // La foto viaja con el acta: primero los números, después la imagen.
+      await subirFotoPendiente()
       setAviso({ tipo: 'ok', texto: `Guardada: ${casilla.clave}.` })
     } catch (e) {
       if (e instanceof ErrorApi && e.estado === 0) {
@@ -497,9 +512,10 @@ export function MovilCaptura() {
           datos,
           intentos: 0,
         })
+        await subirFotoPendiente()
         setAviso({
           tipo: 'cola',
-          texto: 'Sin conexión. La captura quedó guardada en el teléfono.',
+          texto: 'Sin conexión. La captura y la foto quedaron en el teléfono.',
         })
       } else {
         setAviso({
@@ -678,11 +694,13 @@ export function MovilCaptura() {
             <div className="min-w-0">
               <p className="text-sm font-medium text-texto">Foto del acta</p>
               <p className="mt-0.5 text-xs text-texto-tenue">
-                {fotoEstado === 'enviada'
-                  ? 'Ya está en el servidor.'
-                  : fotoEstado === 'porEnviar'
-                    ? 'Guardada en el teléfono, sin enviar.'
-                    : 'Opcional. Se puede subir después.'}
+                {fotoNueva
+                  ? 'Se enviará al guardar el acta.'
+                  : fotoEstado === 'enviada'
+                    ? 'Ya está en el servidor.'
+                    : fotoEstado === 'porEnviar'
+                      ? 'Guardada en el teléfono, sin enviar.'
+                      : 'Opcional. Se envía junto con la captura.'}
               </p>
             </div>
 
@@ -718,7 +736,7 @@ export function MovilCaptura() {
             />
           )}
 
-          {fotoEstado === 'porEnviar' && (
+          {fotoEstado === 'porEnviar' && !fotoNueva && (
             <p className="mt-2 flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400">
               <CloudOff size={13} />
               Se enviará al recuperar la conexión.
