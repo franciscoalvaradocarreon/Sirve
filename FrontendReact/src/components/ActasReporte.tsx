@@ -247,7 +247,7 @@ export function ActasReporte() {
                   className="aspect-[4/3] w-full bg-fondo-alt object-cover"
                 />
                 <span
-                  className={`block truncate px-1.5 py-1 text-[11px] font-medium ${
+                  className={`block truncate px-1.5 py-1 text-[1.375rem] leading-tight font-medium ${
                     activa ? 'bg-primario/10 text-primario' : 'bg-superficie text-texto'
                   }`}
                 >
@@ -263,9 +263,9 @@ export function ActasReporte() {
       {acta && (
         <div className="rounded-xl border border-borde bg-superficie">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-borde px-4 py-2.5">
-            <p className="text-[1.75rem] font-medium leading-tight text-texto">
+            <p className="text-sm font-medium text-texto">
               Sec. {rotulo(acta)}
-              <span className="ml-3 text-[1.5rem] font-normal text-texto-tenue">
+              <span className="ml-2 text-xs font-normal text-texto-tenue">
                 {acta.municipio}
                 {acta.capturista ? ` · ${acta.capturista}` : ''}
                 {` · ${peso(acta.bytes)}`}
