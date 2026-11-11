@@ -5,7 +5,7 @@
  * interfaz: menú, botones, enlaces e indicadores. No hay que tocar una sola
  * clase de Tailwind.
  */
-export const COLOR_PRIMARIO = '#9f2241' // guinda
+export const COLOR_PRIMARIO = '#2fb9a3' // menta
 
 export const NOMBRE_SISTEMA = 'SIRVE'
 
