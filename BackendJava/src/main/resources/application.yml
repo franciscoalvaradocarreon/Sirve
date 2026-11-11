@@ -60,6 +60,9 @@ app:
   cors:
     # En desarrollo, Vite. En producción el front va dentro del WAR (mismo origen).
     origenes: ${CORS_ORIGENES:http://localhost:5173}
+  # Dónde se guardan las fotos de acta. En el servidor es un volumen.
+  actas:
+    ruta: ${ACTAS_RUTA:/datos/actas}
 
 management:
   endpoints:
@@ -75,7 +78,3 @@ logging:
   level:
     mx.sirve: INFO
 
-# Dónde se guardan las fotos de acta (se monta como volumen en el servidor)
-app:
-  actas:
-    ruta: ${ACTAS_RUTA:/datos/actas}
