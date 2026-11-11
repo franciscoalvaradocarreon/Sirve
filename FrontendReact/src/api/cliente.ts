@@ -1,6 +1,6 @@
 import axios, { AxiosError } from 'axios'
 import type { ErrorContrato } from '../types'
-import { leerPase } from '../utils/sesion'
+import { borrarSesion, leerPase } from '../utils/sesion'
 
 /**
  * Cliente HTTP único.
@@ -41,11 +41,31 @@ cliente.interceptors.request.use((configuracion) => {
   return configuracion
 })
 
+/**
+ * Aviso de que el pase dejó de servir.
+ *
+ * La pantalla lo escucha y vuelve al enrolamiento. Se usa un evento y no una
+ * redirección directa para no meter el enrutador dentro del cliente HTTP.
+ */
+export const EVENTO_SESION_EXPIRADA = 'sirve:sesion-expirada'
+
 cliente.interceptors.response.use(
   (respuesta) => respuesta,
   (error: AxiosError<{ error?: ErrorContrato }>) => {
     const estado = error.response?.status ?? 0
     const cuerpo = error.response?.data?.error
+
+    /*
+     * 401 significa que el pase ya no vale: el teléfono se dio de baja, se
+     * reemitió el código o alguien desactivó el aparato. Sin esto la
+     * aplicación seguía mostrando la captura con datos guardados y los envíos
+     * fallaban en silencio.
+     */
+    if (estado === 401 && cuerpo?.codigo === 'NO_AUTENTICADO') {
+      borrarSesion()
+      window.dispatchEvent(new Event(EVENTO_SESION_EXPIRADA))
+    }
+
     return Promise.reject(
       new ErrorApi(
         estado,

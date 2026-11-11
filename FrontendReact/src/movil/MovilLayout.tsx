@@ -11,7 +11,8 @@ import {
 } from '../utils/texto'
 import { useProceso } from './ProcesoContext'
 import { EnrolamientoMovil } from './EnrolamientoMovil'
-import { leerSesion } from '../utils/sesion'
+import { guardarSesion, leerSesion } from '../utils/sesion'
+import { cliente, EVENTO_SESION_EXPIRADA } from '../api/cliente'
 
 /**
  * Armazón de las pantallas móviles.
@@ -76,6 +77,36 @@ export function MovilLayout() {
     `flex flex-1 flex-col items-center gap-1 py-2 text-xs transition-colors ${
       isActive ? 'text-primario' : 'text-texto-tenue'
     }`
+
+  /*
+   * Al arrancar se comprueba que el pase siga sirviendo.
+   *
+   * Un teléfono puede darse de baja desde la administración mientras la
+   * aplicación sigue abierta; sin esta comprobación, la captura se mostraba
+   * igual y los envíos fallaban sin decir por qué.
+   */
+  useEffect(() => {
+    if (!sesion) return
+
+    const alExpirar = () => setSesion(null)
+    window.addEventListener(EVENTO_SESION_EXPIRADA, alExpirar)
+
+    cliente
+      .get<{ nombre: string }>('/sesion')
+      .then((r) => {
+        // El nombre se refresca: pudo cambiarse en la administración.
+        if (r.data?.nombre && r.data.nombre !== sesion.nombre) {
+          guardarSesion({ pase: sesion.pase, nombre: r.data.nombre })
+          setSesion({ pase: sesion.pase, nombre: r.data.nombre })
+        }
+      })
+      .catch(() => {
+        // El 401 ya limpió la sesión desde el interceptor; sin red se sigue
+        // con lo guardado, que es justo lo que permite capturar sin señal.
+      })
+
+    return () => window.removeEventListener(EVENTO_SESION_EXPIRADA, alExpirar)
+  }, [sesion])
 
   /*
    * Sin pase no hay aplicación: lo primero es enlazar el teléfono. Es lo

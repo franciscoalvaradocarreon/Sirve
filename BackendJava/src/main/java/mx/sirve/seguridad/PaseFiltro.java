@@ -26,7 +26,7 @@ import java.util.Optional;
 public class PaseFiltro extends OncePerRequestFilter {
 
     /** Rutas que exigen pase. */
-    private static final String[] PROTEGIDAS = {"/api/capturas", "/api/mis-casillas"};
+    private static final String[] PROTEGIDAS = {"/api/capturas", "/api/mis-casillas", "/api/sesion"};
 
     /** Clave con la que el controlador recibe quién está capturando. */
     public static final String ATRIBUTO_CAPTURISTA = "idCapturista";
