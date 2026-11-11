@@ -11,8 +11,7 @@ import java.util.List;
  * Reporte de actas con foto.
  *
  * Solo aparecen las casillas que **ya tienen** una foto registrada: es una
- * lista de lo que existe, no de lo que falta. Para lo que falta está el
- * reporte de avance.
+ * lista de lo que existe, no de lo que falta.
  */
 @Repository
 public class ActaReporteRepositorio {
@@ -28,6 +27,7 @@ public class ActaReporteRepositorio {
             rs.getString("municipio"),
             rs.getString("seccion"),
             rs.getString("casilla"),
+            rs.getString("tipo"),
             rs.getString("ruta"),
             rs.getInt("bytes"),
             rs.getObject("subida_en", java.time.OffsetDateTime.class),
@@ -39,6 +39,7 @@ public class ActaReporteRepositorio {
                        m.nombre AS municipio,
                        s.clave  AS seccion,
                        k.clave  AS casilla,
+                       k.tipo   AS tipo,
                        a.ruta,
                        a.bytes,
                        a.subida_en,

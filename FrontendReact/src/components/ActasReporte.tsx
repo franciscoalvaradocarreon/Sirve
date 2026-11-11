@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Image as ImageIcon, Search } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Image as ImageIcon, Search } from 'lucide-react'
 import { cliente } from '../api/cliente'
 import { procesoServicio } from '../api/procesoServicio'
 import type { Eleccion, Proceso } from '../types'
@@ -11,6 +11,7 @@ interface Acta {
   municipio: string
   seccion: string
   casilla: string
+  tipo: string
   ruta: string
   bytes: number
   subida_en: string
@@ -20,8 +21,12 @@ interface Acta {
 /**
  * Reporte de actas con foto.
  *
+ * Arriba, una galería de miniaturas rotuladas con sección y casilla: se hojea
+ * como un álbum y se encuentra una sección de un vistazo. Abajo, la banda con
+ * el acta elegida en grande y sus datos.
+ *
  * Solo lista lo que **ya tiene** acta registrada: es un inventario de lo que
- * existe, no de lo que falta. Se puede abrir cada imagen para revisarla.
+ * existe, no de lo que falta.
  */
 export function ActasReporte() {
   const [parametros, setParametros] = useSearchParams()
@@ -29,6 +34,7 @@ export function ActasReporte() {
   const [procesos, setProcesos] = useState<Proceso[]>([])
   const [elecciones, setElecciones] = useState<Eleccion[]>([])
   const [filas, setFilas] = useState<Acta[]>([])
+  const [elegida, setElegida] = useState<number | null>(null)
   const [busqueda, setBusqueda] = useState('')
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -37,7 +43,6 @@ export function ActasReporte() {
   const idEleccion = Number(parametros.get('id_eleccion')) || null
 
   const numero = (n: number) => n.toLocaleString('es-MX')
-
   const peso = (bytes: number) =>
     bytes < 1024 * 1024
       ? `${Math.round(bytes / 1024)} KB`
@@ -90,7 +95,10 @@ export function ActasReporte() {
     setError(null)
     cliente
       .get<Acta[]>('/reportes/actas', { params: { id_eleccion: idEleccion } })
-      .then((r) => setFilas(r.data))
+      .then((r) => {
+        setFilas(r.data)
+        setElegida(r.data.length > 0 ? r.data[0].id_casilla : null)
+      })
       .catch((e) => setError(e.message))
       .finally(() => setCargando(false))
   }, [idEleccion])
@@ -102,9 +110,30 @@ export function ActasReporte() {
       (f) =>
         f.municipio.toLowerCase().includes(t) ||
         f.seccion.includes(t) ||
+        f.casilla.toLowerCase().includes(t) ||
         (f.capturista ?? '').toLowerCase().includes(t),
     )
   }, [filas, busqueda])
+
+  const acta = filtradas.find((f) => f.id_casilla === elegida) ?? null
+  const indice = acta ? filtradas.findIndex((f) => f.id_casilla === acta.id_casilla) : -1
+
+  const mover = (salto: number) => {
+    if (filtradas.length === 0) return
+    const siguiente = (indice + salto + filtradas.length) % filtradas.length
+    setElegida(filtradas[siguiente].id_casilla)
+  }
+
+  // Flechas del teclado para recorrer la galería sin usar el ratón.
+  useEffect(() => {
+    const alTeclear = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') mover(1)
+      if (e.key === 'ArrowLeft') mover(-1)
+    }
+    window.addEventListener('keydown', alTeclear)
+    return () => window.removeEventListener('keydown', alTeclear)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [indice, filtradas])
 
   const totales = useMemo(
     () => ({
@@ -118,11 +147,11 @@ export function ActasReporte() {
     'rounded-lg border border-borde bg-superficie px-3 py-1.5 text-sm text-texto'
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-6xl">
       <header className="mb-5">
         <h1 className="text-xl font-semibold text-texto">Actas</h1>
         <p className="mt-1 text-sm text-texto-tenue">
-          Casillas con foto del acta registrada.
+          {numero(totales.actas)} casillas con foto · {peso(totales.bytes)}
         </p>
       </header>
 
@@ -178,95 +207,101 @@ export function ActasReporte() {
         </div>
       )}
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-xl border border-borde bg-superficie p-4">
-          <p className="text-xs uppercase tracking-wide text-texto-tenue">Actas</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums text-texto">
-            {numero(totales.actas)}
-          </p>
-        </div>
-        <div className="rounded-xl border border-borde bg-superficie p-4">
-          <p className="text-xs uppercase tracking-wide text-texto-tenue">Ocupan</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums text-texto">
-            {peso(totales.bytes)}
-          </p>
-        </div>
-        <div className="rounded-xl border border-borde bg-superficie p-4">
-          <p className="text-xs uppercase tracking-wide text-texto-tenue">Promedio</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums text-texto">
-            {totales.actas > 0 ? peso(Math.round(totales.bytes / totales.actas)) : '—'}
-          </p>
-        </div>
-      </div>
+      {cargando && <p className="py-6 text-center text-sm text-texto-tenue">Cargando…</p>}
 
-      <div className="overflow-hidden rounded-xl border border-borde bg-superficie">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-borde text-left text-xs uppercase tracking-wide text-texto-tenue">
-              <th className="px-3 py-3 font-medium" />
-              <th className="px-3 py-3 font-medium">Sección</th>
-              <th className="px-3 py-3 font-medium">Casilla</th>
-              <th className="px-3 py-3 font-medium">Municipio</th>
-              <th className="px-3 py-3 font-medium">Capturista</th>
-              <th className="px-3 py-3 font-medium">Subida</th>
-              <th className="px-3 py-3 text-right font-medium">Peso</th>
-            </tr>
-          </thead>
-          <tbody>
-            {cargando && (
-              <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-texto-tenue">
-                  Cargando…
-                </td>
-              </tr>
-            )}
+      {!cargando && filtradas.length === 0 && (
+        <div className="rounded-xl border border-borde bg-superficie p-10 text-center text-texto-tenue">
+          <ImageIcon size={22} className="mx-auto mb-2 opacity-40" />
+          Todavía no hay actas con foto en esta elección.
+        </div>
+      )}
 
-            {!cargando && filtradas.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-texto-tenue">
-                  <ImageIcon size={20} className="mx-auto mb-2 opacity-40" />
-                  Todavía no hay actas con foto en esta elección.
-                </td>
-              </tr>
-            )}
+      {/* Galería de miniaturas */}
+      {filtradas.length > 0 && (
+        <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+          {filtradas.map((a) => {
+            const activa = a.id_casilla === elegida
+            return (
+              <button
+                key={a.id_casilla}
+                onClick={() => setElegida(a.id_casilla)}
+                title={`${a.seccion}-${a.casilla} · ${a.municipio}`}
+                className={`overflow-hidden rounded-lg border text-left transition-colors ${
+                  activa
+                    ? 'border-primario ring-2 ring-primario/30'
+                    : 'border-borde hover:border-primario/60'
+                }`}
+              >
+                <img
+                  src={`/api/actas/${a.id_casilla}/${idEleccion}/imagen`}
+                  alt={`Acta ${a.seccion}-${a.casilla}`}
+                  loading="lazy"
+                  className="aspect-[4/3] w-full bg-fondo-alt object-cover"
+                />
+                <span
+                  className={`block truncate px-2 py-1.5 text-xs font-medium ${
+                    activa ? 'bg-primario/10 text-primario' : 'bg-superficie text-texto'
+                  }`}
+                >
+                  {a.seccion}-{a.tipo}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      )}
 
-            {filtradas.map((a) => (
-              <tr key={`${a.id_casilla}`} className="border-b border-borde last:border-0">
-                <td className="px-3 py-2">
-                  <a
-                    href={`/api/actas/${a.id_casilla}/${idEleccion}/imagen`}
-                    target="_blank"
-                    rel="noreferrer"
-                    title="Abrir la imagen"
-                  >
-                    <img
-                      src={`/api/actas/${a.id_casilla}/${idEleccion}/imagen`}
-                      alt={`Acta ${a.casilla}`}
-                      loading="lazy"
-                      className="h-10 w-14 rounded border border-borde object-cover"
-                    />
-                  </a>
-                </td>
-                <td className="px-3 py-2 font-mono text-xs text-texto">{a.seccion}</td>
-                <td className="px-3 py-2 font-mono text-xs text-texto-tenue">{a.casilla}</td>
-                <td className="px-3 py-2 text-texto">{a.municipio}</td>
-                <td className="px-3 py-2 text-texto-tenue">{a.capturista ?? '—'}</td>
-                <td className="px-3 py-2 text-texto-tenue">
-                  {new Date(a.subida_en).toLocaleString('es-MX', {
-                    day: '2-digit',
-                    month: 'short',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </td>
-                <td className="px-3 py-2 text-right tabular-nums text-texto-tenue">
-                  {peso(a.bytes)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* Banda con el acta elegida */}
+      {acta && (
+        <div className="rounded-xl border border-borde bg-superficie">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-borde px-4 py-2.5">
+            <p className="text-sm font-medium text-texto">
+              Sec. {acta.seccion}-{acta.tipo}
+              <span className="ml-2 text-xs font-normal text-texto-tenue">
+                {acta.municipio}
+                {acta.capturista ? ` · ${acta.capturista}` : ''}
+                {` · ${peso(acta.bytes)}`}
+              </span>
+            </p>
+
+            <span className="flex items-center gap-1">
+              <span className="mr-2 text-xs text-texto-tenue">
+                {indice + 1} de {filtradas.length}
+              </span>
+              <button
+                onClick={() => mover(-1)}
+                className="rounded-lg border border-borde p-1.5 text-texto-tenue hover:text-primario"
+                title="Anterior"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <button
+                onClick={() => mover(1)}
+                className="rounded-lg border border-borde p-1.5 text-texto-tenue hover:text-primario"
+                title="Siguiente"
+              >
+                <ChevronRight size={16} />
+              </button>
+              <a
+                href={`/api/actas/${acta.id_casilla}/${idEleccion}/imagen`}
+                target="_blank"
+                rel="noreferrer"
+                className="ml-2 text-xs text-primario hover:underline"
+              >
+                Ver completa
+              </a>
+            </span>
+          </div>
+
+          <div className="flex items-center justify-center bg-fondo-alt p-3">
+            <img
+              src={`/api/actas/${acta.id_casilla}/${idEleccion}/imagen`}
+              alt={`Acta ${acta.seccion}-${acta.casilla}`}
+              className="max-h-[60vh] rounded-lg object-contain"
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
