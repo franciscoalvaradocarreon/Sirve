@@ -171,7 +171,8 @@ export function Capturistas() {
           </table>
         </div>
 
-        {/* Teléfonos del seleccionado */}
+        {/* Columna derecha: teléfonos y secciones del seleccionado */}
+        <div className="space-y-4">
         <div className="rounded-xl border border-borde bg-superficie p-4">
           <h2 className="mb-1 text-sm font-semibold text-texto">Teléfonos</h2>
           {!elegido ? (
@@ -251,6 +252,61 @@ export function Capturistas() {
               )}
             </>
           )}
+        </div>
+
+        {/* Secciones del seleccionado.
+
+            Va aquí, junto a los teléfonos, porque son las dos cosas que se
+            revisan al preparar a una persona: qué cubre y desde qué aparatos.
+            Editar es un enlace a la pantalla propia, donde hay espacio. */}
+        <div className="rounded-xl border border-borde bg-superficie p-4">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-texto">Secciones</h2>
+            {elegido && (
+              <Link
+                to={`/capturistas/${elegido.id}`}
+                className="text-xs text-primario hover:underline"
+              >
+                Editar
+              </Link>
+            )}
+          </div>
+
+          {!elegido ? (
+            <p className="text-xs text-texto-tenue">
+              Elige un capturista para ver sus secciones.
+            </p>
+          ) : elegido.secciones.length === 0 ? (
+            <p className="text-xs text-texto-tenue">
+              Sin secciones asignadas.
+            </p>
+          ) : (
+            <>
+              <p className="mb-2 text-xs text-texto-tenue">
+                {elegido.secciones.length} secciones ·{' '}
+                {numero(elegido.secciones.reduce((t, s) => t + s.casillas, 0))} casillas
+              </p>
+              <div className="max-h-56 space-y-1 overflow-y-auto">
+                {elegido.secciones.map((s) => (
+                  <div
+                    key={s.id}
+                    className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-fondo-alt"
+                  >
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="font-mono text-xs text-texto">{s.clave}</span>
+                      <span className="truncate text-xs text-texto-tenue">
+                        {s.municipio}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-xs tabular-nums text-texto-tenue">
+                      {s.casillas}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
         </div>
       </div>
     </div>
