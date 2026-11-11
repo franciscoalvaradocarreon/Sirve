@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Image as ImageIcon, Search } from 'lucide-react'
 import { cliente } from '../api/cliente'
@@ -36,6 +36,7 @@ export function ActasReporte() {
   const [filas, setFilas] = useState<Acta[]>([])
   const [elegida, setElegida] = useState<number | null>(null)
   const [busqueda, setBusqueda] = useState('')
+  const carrilRef = useRef<HTMLDivElement | null>(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -132,6 +133,20 @@ export function ActasReporte() {
     setElegida(filtradas[siguiente].id_casilla)
   }
 
+  /*
+   * Al cambiar de acta, su miniatura se trae a la vista dentro del carril.
+   *
+   * Sin esto, navegar con las flechas movía la imagen grande pero la
+   * miniatura activa quedaba fuera de la ventana del carril, y no se sabía
+   * en cuál se estaba.
+   */
+  useEffect(() => {
+    const carril = carrilRef.current
+    if (!carril) return
+    const activa = carril.querySelector<HTMLElement>('[data-activa="si"]')
+    activa?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' })
+  }, [elegida])
+
   // Flechas del teclado para recorrer la galería sin usar el ratón.
   useEffect(() => {
     const alTeclear = (e: KeyboardEvent) => {
@@ -224,17 +239,23 @@ export function ActasReporte() {
         </div>
       )}
 
-      {/* Galería de miniaturas */}
+      {/* Galería de miniaturas, en un solo renglón con desplazamiento
+          horizontal. Con muchas actas, partirse en dos o tres renglones
+          empujaba la imagen grande fuera de la pantalla. */}
       {filtradas.length > 0 && (
-        <div className="mb-4 grid grid-cols-4 gap-1.5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10">
+        <div
+          ref={carrilRef}
+          className="mb-4 flex gap-1.5 overflow-x-auto pb-2 [scrollbar-width:thin]"
+        >
           {filtradas.map((a) => {
             const activa = a.id_casilla === elegida
             return (
               <button
                 key={a.id_casilla}
                 onClick={() => setElegida(a.id_casilla)}
-                title={`${a.seccion}-${a.casilla} · ${a.municipio}`}
-                className={`overflow-hidden rounded-lg border text-left transition-colors ${
+                title={`${rotulo(a)} · ${a.municipio}`}
+                data-activa={activa ? 'si' : 'no'}
+                className={`w-28 shrink-0 overflow-hidden rounded-lg border text-left transition-colors ${
                   activa
                     ? 'border-primario ring-2 ring-primario/30'
                     : 'border-borde hover:border-primario/60'
@@ -242,7 +263,7 @@ export function ActasReporte() {
               >
                 <img
                   src={`/api/actas/${a.id_casilla}/${idEleccion}/imagen`}
-                  alt={`Acta ${a.seccion}-${a.casilla}`}
+                  alt={`Acta ${rotulo(a)}`}
                   loading="lazy"
                   className="aspect-[4/3] w-full bg-fondo-alt object-cover"
                 />
@@ -258,7 +279,6 @@ export function ActasReporte() {
           })}
         </div>
       )}
-
       {/* Banda con el acta elegida */}
       {acta && (
         <div className="rounded-xl border border-borde bg-superficie">
