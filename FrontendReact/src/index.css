@@ -18,18 +18,16 @@
   --primario-borde: color-mix(in oklab, var(--primario) 35%, white);
   --primario-texto: color-mix(in oklab, var(--primario) 75%, black);
 
-  --fondo: #ffffff;
-  /* Los neutros llevan el tinte de la guinda con más presencia: el fondo
-     alterno y los bordes se distinguen a simple vista, sin llegar a leerse
-     como rosa. */
-  --fondo-alt: #f4eaec;
+  /* Tinte franco: el fondo de la página ya no es blanco puro. Se ve rosado al
+     lado de una tarjeta blanca, que es justo lo que hace la separación. */
+  --fondo: #fbf3f5;
+  --fondo-alt: #f2e0e5;
   --superficie: #ffffff;
-  /* Borde con 1.9:1 contra el blanco: marca la separación de una tarjeta
-     sin necesidad de sombra. */
-  --borde: #cdb9c0;
-  --borde-tenue: #e4d7db;
-  --texto: #1d1216;
-  --texto-tenue: #5e4c53;
+  /* Borde en 2.5:1 contra el blanco: delimita la tarjeta sin sombra. */
+  --borde: #c19aa6;
+  --borde-tenue: #e0c8ce;
+  --texto: #1b1014;
+  --texto-tenue: #553f47;
 }
 
 .dark {
