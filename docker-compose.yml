@@ -72,7 +72,12 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    volumes:
+      # Las fotos de acta viven fuera de la base: son archivos, no filas.
+      # Un volumen propio permite borrarlas o moverlas sin tocar los datos.
+      - actas:/datos/actas
     environment:
+      ACTAS_RUTA: /datos/actas
       # El rol de la aplicación: lee y escribe datos, no altera el esquema.
       DB_URL:      "jdbc:postgresql://db:5432/${DB_NAME:-SIRVE}"
       DB_USER:     "${DB_APP_USER:-sirve_app}"
@@ -105,6 +110,7 @@ services:
 
 volumes:
   datos_sirve:
+  actas:
 
 networks:
   # Red privada entre la base y la aplicación. Nada de esto ve Internet.

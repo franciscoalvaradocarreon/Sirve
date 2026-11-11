@@ -14,6 +14,12 @@ server:
   forward-headers-strategy: framework
 
 spring:
+  # La foto del acta llega por partes; el límite por omisión es de 1 MB y no
+  # alcanza ni para una imagen comprimida.
+  servlet:
+    multipart:
+      max-file-size: 8MB
+      max-request-size: 10MB
   application:
     name: sirve-p
 
@@ -68,3 +74,8 @@ management:
 logging:
   level:
     mx.sirve: INFO
+
+# Dónde se guardan las fotos de acta (se monta como volumen en el servidor)
+app:
+  actas:
+    ruta: ${ACTAS_RUTA:/datos/actas}

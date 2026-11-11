@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { CheckCircle2, CloudOff, Download, Save, TriangleAlert } from 'lucide-react'
+import { Camera, CheckCircle2, CloudOff, Download, Save, TriangleAlert } from 'lucide-react'
 import { ErrorApi } from '../api/cliente'
 import { capturaServicio } from '../api/capturaServicio'
 import { dispositivoServicio } from '../api/dispositivoServicio'
@@ -16,6 +16,8 @@ import {
   limpiarBorrador,
 } from '../utils/borrador'
 import { nuevoUuid } from '../utils/uuid'
+import { fotoServicio } from '../api/fotoServicio'
+import { colaFotos, comprimirFoto } from '../utils/foto'
 import { useProceso } from './ProcesoContext'
 import { AvisoFlotante } from './AvisoFlotante'
 import type {
@@ -54,6 +56,9 @@ export function MovilCaptura() {
   const [progreso, setProgreso] = useState<string | null>(null)
   const [piezas, setPiezas] = useState({ listas: 0, total: 0 })
   const [enCola, setEnCola] = useState<CapturaEnCola[]>([])
+  const [fotoEstado, setFotoEstado] = useState<'ninguna' | 'porEnviar' | 'enviada'>('ninguna')
+  const [fotoVista, setFotoVista] = useState<string | null>(null)
+  const [fotoCargando, setFotoCargando] = useState(false)
   const [aviso, setAviso] = useState<
     { tipo: 'ok' | 'cola' | 'info' | 'error'; texto: string } | null
   >(null)
@@ -290,6 +295,79 @@ export function MovilCaptura() {
       vigente = false
     }
   }, [idCasilla, idEleccion])
+
+  /*
+   * Estado de la foto de esta casilla.
+   *
+   * Primero se mira la cola del teléfono —una foto tomada sin señal vive ahí—
+   * y después el servidor. La vista previa solo se arma desde la cola: bajar
+   * la imagen del servidor para mostrarla sería gastar datos para nada.
+   */
+  useEffect(() => {
+    setFotoEstado('ninguna')
+    setFotoVista(null)
+    if (!idCasilla || !idEleccion) return
+
+    let vigente = true
+    ;(async () => {
+      const enCola = await colaFotos.buscar(idCasilla, idEleccion).catch(() => null)
+      if (!vigente) return
+      if (enCola) {
+        setFotoEstado('porEnviar')
+        setFotoVista(URL.createObjectURL(enCola.archivo))
+        return
+      }
+      if (!navigator.onLine) return
+      const existe = await fotoServicio.existe(idCasilla, idEleccion).catch(() => false)
+      if (vigente && existe) setFotoEstado('enviada')
+    })()
+
+    return () => {
+      vigente = false
+    }
+  }, [idCasilla, idEleccion])
+
+  async function elegirFoto(archivo: File) {
+    if (!idCasilla || !idEleccion) return
+    setFotoCargando(true)
+    setAviso(null)
+    try {
+      const comprimida = await comprimirFoto(archivo)
+      setFotoVista(URL.createObjectURL(comprimida))
+
+      try {
+        await fotoServicio.subir(idCasilla, idEleccion, comprimida)
+        await colaFotos.eliminar(idCasilla, idEleccion)
+        setFotoEstado('enviada')
+        setAviso({ tipo: 'ok', texto: 'Foto del acta enviada.' })
+      } catch (e) {
+        if (e instanceof ErrorApi && e.estado === 0) {
+          await colaFotos.guardar({
+            clave: `${idCasilla}:${idEleccion}`,
+            idCasilla,
+            idEleccion,
+            archivo: comprimida,
+            creado: Date.now(),
+          })
+          setFotoEstado('porEnviar')
+          setAviso({
+            tipo: 'cola',
+            texto: 'Foto guardada en el teléfono. Se enviará al recuperar la conexión.',
+          })
+        } else {
+          setFotoEstado('ninguna')
+          setAviso({
+            tipo: 'error',
+            texto: e instanceof Error ? e.message : 'No se pudo subir la foto',
+          })
+        }
+      }
+    } catch {
+      setAviso({ tipo: 'error', texto: 'No se pudo leer la imagen.' })
+    } finally {
+      setFotoCargando(false)
+    }
+  }
 
   /** Borrador: se guarda conforme se escribe. */
   useEffect(() => {
@@ -607,6 +685,62 @@ export function MovilCaptura() {
           </p>
         )}
       </div>
+
+      {/* Foto del acta. Opcional: la captura se guarda igual sin ella. */}
+      {casilla && (
+        <div className="mx-4 mb-4 rounded-xl border border-borde bg-superficie p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-texto">Foto del acta</p>
+              <p className="mt-0.5 text-xs text-texto-tenue">
+                {fotoEstado === 'enviada'
+                  ? 'Ya está en el servidor.'
+                  : fotoEstado === 'porEnviar'
+                    ? 'Guardada en el teléfono, sin enviar.'
+                    : 'Opcional. Se puede subir después.'}
+              </p>
+            </div>
+
+            <label
+              className={`flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium ${
+                fotoCargando
+                  ? 'border-borde text-texto-tenue opacity-50'
+                  : 'border-primario text-primario'
+              }`}
+            >
+              <Camera size={15} />
+              {fotoCargando ? 'Leyendo…' : fotoEstado === 'ninguna' ? 'Tomar foto' : 'Cambiar'}
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                disabled={fotoCargando}
+                onChange={(e) => {
+                  const archivo = e.target.files?.[0]
+                  if (archivo) void elegirFoto(archivo)
+                  e.target.value = ''
+                }}
+                className="hidden"
+              />
+            </label>
+          </div>
+
+          {fotoVista && (
+            <img
+              src={fotoVista}
+              alt="Acta capturada"
+              className="mt-3 max-h-40 w-full rounded-lg border border-borde object-cover"
+            />
+          )}
+
+          {fotoEstado === 'porEnviar' && (
+            <p className="mt-2 flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400">
+              <CloudOff size={13} />
+              Se enviará al recuperar la conexión.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Resumen al final del contenido */}
       {casilla && (
