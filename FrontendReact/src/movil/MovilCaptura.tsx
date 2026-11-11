@@ -515,7 +515,7 @@ export function MovilCaptura() {
                 const marca = pendiente ? ' •' : c.capturada ? ' ✓' : ''
                 return (
                   <option key={c.id} value={c.id}>
-                    {c.clave} · Sec. {c.seccion}{marca}
+                    Sec. {c.seccion} · {c.tipo}{marca}
                   </option>
                 )
               })}
