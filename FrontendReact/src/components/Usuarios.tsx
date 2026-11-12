@@ -28,6 +28,7 @@ export function Usuarios() {
   const [nuevoUsuario, setNuevoUsuario] = useState('')
   const [nuevoNombre, setNuevoNombre] = useState('')
   const [nuevoRol, setNuevoRol] = useState('OPERADOR')
+  const [nuevaClave, setNuevaClave] = useState('')
 
   const roles = [
     ['ADMIN', 'Administrador — todo, incluidos usuarios'],
@@ -54,11 +55,15 @@ export function Usuarios() {
         usuario: nuevoUsuario,
         nombre: nuevoNombre,
         rol: nuevoRol,
+        clave: nuevaClave.trim() || undefined,
       })
-      setClaveMostrada({ usuario: nuevoUsuario, clave })
+      // Si la escribió el administrador no hace falta mostrarla: ya la conoce.
+      // Se muestra solo cuando la generó el sistema.
+      if (!nuevaClave.trim()) setClaveMostrada({ usuario: nuevoUsuario, clave })
       setCreando(false)
       setNuevoUsuario('')
       setNuevoNombre('')
+      setNuevaClave('')
       recargar()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo crear')
@@ -188,6 +193,23 @@ export function Usuarios() {
               </select>
             </label>
           </div>
+          <label className="mt-3 block text-xs text-texto-tenue">
+            Contraseña <span className="text-texto-tenue">(opcional)</span>
+            <input
+              type="password"
+              value={nuevaClave}
+              onChange={(e) => setNuevaClave(e.target.value)}
+              placeholder="Déjala vacía y el sistema genera una"
+              autoComplete="new-password"
+              className={`mt-1 max-w-xs ${campo}`}
+            />
+          </label>
+
+          <p className="mt-1 text-xs text-texto-tenue">
+            Si la escribes, el sistema no la vuelve a mostrar —tú ya la sabes—. Si la
+            dejas vacía, genera una y la muestra una sola vez.
+          </p>
+
           <div className="mt-3 flex gap-2">
             <button
               onClick={() => void crear()}
