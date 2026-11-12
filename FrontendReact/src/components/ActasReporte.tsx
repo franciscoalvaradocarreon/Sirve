@@ -309,16 +309,16 @@ export function ActasReporte() {
               <button
                 onClick={() => desplazarCarril(-1)}
                 title="Miniaturas anteriores"
-                className="absolute -left-3 top-1/2 z-10 -translate-y-1/2 rounded-full border border-borde bg-superficie p-1.5 text-texto-tenue shadow-md hover:text-primario"
+                className="absolute -left-4 top-1/2 z-10 -translate-y-1/2 rounded-full border border-borde bg-superficie p-3 text-texto-tenue shadow-md hover:text-primario"
               >
-                <ChevronLeft size={18} />
+                <ChevronLeft size={36} />
               </button>
               <button
                 onClick={() => desplazarCarril(1)}
                 title="Miniaturas siguientes"
-                className="absolute -right-3 top-1/2 z-10 -translate-y-1/2 rounded-full border border-borde bg-superficie p-1.5 text-texto-tenue shadow-md hover:text-primario"
+                className="absolute -right-4 top-1/2 z-10 -translate-y-1/2 rounded-full border border-borde bg-superficie p-3 text-texto-tenue shadow-md hover:text-primario"
               >
-                <ChevronRight size={18} />
+                <ChevronRight size={36} />
               </button>
             </>
           )}
@@ -409,9 +409,9 @@ export function ActasReporte() {
             <button
               onClick={() => mover(-1)}
               title="Anterior"
-              className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-superficie/90 p-2 text-texto shadow-md transition-colors hover:text-primario"
+              className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-superficie/90 p-4 text-texto shadow-md transition-colors hover:text-primario"
             >
-              <ChevronLeft size={22} />
+              <ChevronLeft size={44} />
             </button>
 
             <a
@@ -431,9 +431,9 @@ export function ActasReporte() {
             <button
               onClick={() => mover(1)}
               title="Siguiente"
-              className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-superficie/90 p-2 text-texto shadow-md transition-colors hover:text-primario"
+              className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-superficie/90 p-4 text-texto shadow-md transition-colors hover:text-primario"
             >
-              <ChevronRight size={22} />
+              <ChevronRight size={44} />
             </button>
           </div>
         </div>
