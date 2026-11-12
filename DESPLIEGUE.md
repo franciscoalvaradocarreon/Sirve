@@ -232,3 +232,34 @@ viva: 20 764 casillas, 8 773 secciones, 7 396 capturas.
 Vive en el mismo servidor que la base. Si se pierde el disco, se pierden los
 dos. Falta copiarlo fuera —a otro servidor, a un bucket—; con un `rclone` o un
 `scp` diario al final del script se resuelve.
+
+## Acceso con TLS
+
+El servidor atiende dos sistemas y comparte un solo Caddy, el del SIH, que ya
+tenía los puertos 80 y 443 y un certificado de Let's Encrypt funcionando.
+
+```
+https://sirve.140.84.191.170.sslip.io
+```
+
+`sslip.io` resuelve cualquier subdominio de una IP sin registrar nada, así que
+no hace falta comprar dominio. El certificado se renueva solo.
+
+### De qué depende
+
+1. **Un bloque en el Caddyfile del SIH** (`/home/opc/SIH-IA/Caddyfile`) que
+   apunta a `sirve-p-app-1:8080`.
+2. **La red `proxy`**, compartida por los dos sistemas. El Caddy entra a ella
+   desde `docker-compose.override.yml` del SIH, archivo local y no del
+   repositorio, para que sobreviva a sus despliegues.
+
+Si el SIH se despliega y su pipeline sobrescribe el `Caddyfile`, el bloque de
+SIRVE desaparece y el sitio deja de responder por HTTPS. Señal de eso: 502 en
+el dominio y 200 en `http://140.84.191.170:8088`.
+
+### Por qué no se usa la red del SIH directamente
+
+Se intentó y rompió la base: en esa red existe otro contenedor llamado `db`
+—la base del SIH— y el nombre quedaba ambiguo, así que la aplicación empezó a
+autenticarse contra la base equivocada. La red `proxy` no tiene nombres
+repetidos.
