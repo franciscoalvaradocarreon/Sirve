@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Image as ImageIcon, Search } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Image as ImageIcon, Search, X } from 'lucide-react'
 import { cliente } from '../api/cliente'
 import { procesoServicio } from '../api/procesoServicio'
 import type { Eleccion, Proceso } from '../types'
@@ -37,6 +37,7 @@ export function ActasReporte() {
   const [elegida, setElegida] = useState<number | null>(null)
   const [busqueda, setBusqueda] = useState('')
   const carrilRef = useRef<HTMLDivElement | null>(null)
+  const [ampliada, setAmpliada] = useState(false)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -200,6 +201,7 @@ export function ActasReporte() {
   // Flechas del teclado para recorrer la galería sin usar el ratón.
   useEffect(() => {
     const alTeclear = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setAmpliada(false)
       if (e.key === 'ArrowRight') mover(1)
       if (e.key === 'ArrowLeft') mover(-1)
     }
@@ -371,13 +373,85 @@ export function ActasReporte() {
             </span>
           </div>
 
-          <div className="flex items-center justify-center bg-fondo-alt p-3">
+          {/* Flechas a los lados de la imagen: se navega sin bajar a la cabecera.
+              Al pulsar la imagen se abre ampliada, sin pasar por «ver completa». */}
+          <div className="relative flex items-center justify-center bg-fondo-alt p-3">
+            <button
+              onClick={() => mover(-1)}
+              title="Anterior"
+              className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-superficie/90 p-2 text-texto shadow-md transition-colors hover:text-primario"
+            >
+              <ChevronLeft size={22} />
+            </button>
+
             <img
               src={`/api/actas/${acta.id_casilla}/${idEleccion}/imagen`}
-              alt={`Acta ${acta.seccion}-${acta.casilla}`}
-              className="max-h-[60vh] rounded-lg object-contain"
+              alt={`Acta ${rotulo(acta)}`}
+              onClick={() => setAmpliada(true)}
+              title="Ampliar"
+              className="max-h-[60vh] cursor-zoom-in rounded-lg object-contain"
             />
+
+            <button
+              onClick={() => mover(1)}
+              title="Siguiente"
+              className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full bg-superficie/90 p-2 text-texto shadow-md transition-colors hover:text-primario"
+            >
+              <ChevronRight size={22} />
+            </button>
           </div>
+        </div>
+      )}
+
+      {/* Visor ampliado. Se cierra con clic, con Escape o con la X. */}
+      {ampliada && acta && (
+        <div
+          onClick={() => setAmpliada(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4"
+        >
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              setAmpliada(false)
+            }}
+            className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
+            title="Cerrar"
+          >
+            <X size={22} />
+          </button>
+
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              mover(-1)
+            }}
+            className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-3 text-white hover:bg-white/20"
+            title="Anterior"
+          >
+            <ChevronLeft size={26} />
+          </button>
+
+          <img
+            src={`/api/actas/${acta.id_casilla}/${idEleccion}/imagen`}
+            alt={`Acta ${rotulo(acta)}`}
+            onClick={(e) => e.stopPropagation()}
+            className="max-h-[92vh] max-w-full cursor-default rounded-lg object-contain"
+          />
+
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              mover(1)
+            }}
+            className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-3 text-white hover:bg-white/20"
+            title="Siguiente"
+          >
+            <ChevronRight size={26} />
+          </button>
+
+          <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-4 py-1.5 text-sm text-white">
+            Sec. {rotulo(acta)} · {indice + 1} de {filtradas.length}
+          </p>
         </div>
       )}
     </div>
