@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { ChevronDown, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { ChevronDown, KeyRound, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { CambiarClave } from './CambiarClave'
 import { NOMBRE_SISTEMA, DESCRIPCION_SISTEMA } from '../utils/tema'
 import { iconoPorNombre } from '../utils/iconos'
 import { useSesion } from '../context/SesionContext'
@@ -26,6 +27,8 @@ export function Menu({ colapsado, onAlternar }: Props) {
   const { pathname } = useLocation()
   const navegar = useNavigate()
   const { menus, usuario, salir } = useSesion()
+
+  const [cambiandoClave, setCambiandoClave] = useState(false)
 
   const [abiertos, setAbiertos] = useState<number[]>(() => {
     try {
@@ -153,9 +156,18 @@ export function Menu({ colapsado, onAlternar }: Props) {
       {/* Quién está dentro y cómo salir. Va abajo, lejos de los enlaces, para
           no pulsarlo por error al navegar. */}
       {!colapsado && usuario && (
-        <div className="border-t border-borde px-4 py-3">
-          <p className="truncate text-xs font-medium text-texto">{usuario.nombre}</p>
-          <p className="truncate text-xs text-texto-tenue">{usuario.rol_nombre}</p>
+        <div className="flex items-center gap-2 border-t border-borde px-4 py-3">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-medium text-texto">{usuario.nombre}</p>
+            <p className="truncate text-xs text-texto-tenue">{usuario.rol_nombre}</p>
+          </div>
+          <button
+            onClick={() => setCambiandoClave(true)}
+            className="shrink-0 rounded p-1.5 text-texto-tenue hover:text-primario"
+            title="Cambiar mi contraseña"
+          >
+            <KeyRound size={15} />
+          </button>
         </div>
       )}
 
@@ -176,6 +188,21 @@ export function Menu({ colapsado, onAlternar }: Props) {
         {colapsado ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
         {!colapsado && <span>Colapsar</span>}
       </button>
+
+      {cambiandoClave && (
+        <CambiarClave
+          titulo="Cambiar mi contraseña"
+          nombre={usuario?.usuario}
+          propia
+          alCerrar={() => setCambiandoClave(false)}
+          // Cambiar la propia contraseña invalida el token: hay que volver a
+          // entrar. Se avisa cerrando la sesión aquí, no dejando que el
+          // siguiente clic falle con un 401 sin explicación.
+          alTerminar={() => {
+            void salir().then(() => navegar('/login', { replace: true }))
+          }}
+        />
+      )}
     </aside>
   )
 }

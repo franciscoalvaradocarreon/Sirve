@@ -70,13 +70,13 @@ public class UsuarioControlador {
     }
 
     @PostMapping("/{id}/clave")
-    public ResponseEntity<Map<String, String>> restablecer(
+    public ResponseEntity<Void> restablecer(
             @PathVariable String id,
             @RequestBody(required = false) Map<String, Object> cuerpo,
             @RequestAttribute(JwtServicio.ATRIBUTO_USUARIO) JwtServicio.DatosToken datos) {
         exigirAdmin(datos);
-        String clave = servicio.restablecer(id, cuerpo == null ? null : (String) cuerpo.get("clave"));
-        return ResponseEntity.ok(Map.of("clave", clave));
+        servicio.restablecer(id, cuerpo == null ? null : (String) cuerpo.get("clave"));
+        return ResponseEntity.noContent().build();
     }
 
     /** Cambio de la propia contraseña. Cualquier rol puede hacerlo. */

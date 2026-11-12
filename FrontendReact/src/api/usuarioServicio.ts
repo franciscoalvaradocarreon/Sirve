@@ -6,14 +6,14 @@ export const usuarioServicio = {
   listar: async (): Promise<UsuarioSesion[]> =>
     (await cliente.get<UsuarioSesion[]>('/usuarios')).data,
 
-  /** Devuelve la contraseña generada, que se muestra una sola vez. */
   crear: async (datos: {
     usuario: string
     nombre: string
     rol: string
-    clave?: string
-  }): Promise<string> =>
-    (await cliente.post<{ clave: string }>('/usuarios', datos)).data.clave,
+    clave: string
+  }): Promise<void> => {
+    await cliente.post('/usuarios', datos)
+  },
 
   actualizar: async (
     id: string,
@@ -22,8 +22,10 @@ export const usuarioServicio = {
     await cliente.put(`/usuarios/${id}`, datos)
   },
 
-  restablecer: async (id: string): Promise<string> =>
-    (await cliente.post<{ clave: string }>(`/usuarios/${id}/clave`, {})).data.clave,
+  /** La contraseña la escribe quien administra; no se genera ni se devuelve. */
+  restablecer: async (id: string, clave: string): Promise<void> => {
+    await cliente.post(`/usuarios/${id}/clave`, { clave })
+  },
 
   eliminar: async (id: string): Promise<void> => {
     await cliente.delete(`/usuarios/${id}`)

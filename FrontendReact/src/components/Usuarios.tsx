@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Copy, KeyRound, Plus, Trash2, UserRound } from 'lucide-react'
+import { KeyRound, Plus, Trash2, UserRound } from 'lucide-react'
+import { CambiarClave } from './CambiarClave'
 import { usuarioServicio } from '../api/usuarioServicio'
 import { useSesion } from '../context/SesionContext'
 import type { UsuarioSesion } from '../types'
@@ -20,9 +21,8 @@ export function Usuarios() {
   const [lista, setLista] = useState<UsuarioSesion[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [claveMostrada, setClaveMostrada] = useState<{ usuario: string; clave: string } | null>(
-    null,
-  )
+  /** Usuario al que se le está asignando una contraseña nueva. */
+  const [cambiando, setCambiando] = useState<UsuarioSesion | null>(null)
 
   const [creando, setCreando] = useState(false)
   const [nuevoUsuario, setNuevoUsuario] = useState('')
@@ -51,15 +51,12 @@ export function Usuarios() {
 
   async function crear() {
     try {
-      const clave = await usuarioServicio.crear({
+      await usuarioServicio.crear({
         usuario: nuevoUsuario,
         nombre: nuevoNombre,
         rol: nuevoRol,
-        clave: nuevaClave.trim() || undefined,
+        clave: nuevaClave,
       })
-      // Si la escribió el administrador no hace falta mostrarla: ya la conoce.
-      // Se muestra solo cuando la generó el sistema.
-      if (!nuevaClave.trim()) setClaveMostrada({ usuario: nuevoUsuario, clave })
       setCreando(false)
       setNuevoUsuario('')
       setNuevoNombre('')
@@ -70,16 +67,7 @@ export function Usuarios() {
     }
   }
 
-  async function restablecer(u: UsuarioSesion) {
-    if (!window.confirm(`¿Asignar una contraseña nueva a ${u.nombre}? La anterior dejará de servir.`))
-      return
-    try {
-      const clave = await usuarioServicio.restablecer(u.id)
-      setClaveMostrada({ usuario: u.usuario, clave })
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo restablecer')
-    }
-  }
+
 
   async function cambiarEstado(u: UsuarioSesion) {
     try {
@@ -130,33 +118,6 @@ export function Usuarios() {
         </div>
       )}
 
-      {/* La contraseña se muestra una sola vez: no hay forma de recuperarla. */}
-      {claveMostrada && (
-        <div className="mb-4 rounded-lg border border-primario/40 bg-primario/10 p-4">
-          <p className="text-xs text-texto-tenue">
-            Contraseña de <strong>{claveMostrada.usuario}</strong> · se muestra una sola vez
-          </p>
-          <div className="mt-1 flex items-center justify-between gap-2">
-            <span className="font-mono text-xl tracking-[0.2em] text-texto">
-              {claveMostrada.clave}
-            </span>
-            <button
-              onClick={() => void navigator.clipboard?.writeText(claveMostrada.clave)}
-              className="rounded p-1.5 text-texto-tenue hover:text-primario"
-              title="Copiar"
-            >
-              <Copy size={15} />
-            </button>
-          </div>
-          <button
-            onClick={() => setClaveMostrada(null)}
-            className="mt-2 text-xs text-primario hover:underline"
-          >
-            Ya la anoté
-          </button>
-        </div>
-      )}
-
       {creando && (
         <div className="mb-4 rounded-xl border border-borde bg-superficie p-4">
           <div className="grid gap-3 sm:grid-cols-3">
@@ -194,26 +155,21 @@ export function Usuarios() {
             </label>
           </div>
           <label className="mt-3 block text-xs text-texto-tenue">
-            Contraseña <span className="text-texto-tenue">(opcional)</span>
+            Contraseña
             <input
               type="password"
               value={nuevaClave}
               onChange={(e) => setNuevaClave(e.target.value)}
-              placeholder="Déjala vacía y el sistema genera una"
+              placeholder="Mínimo 8 caracteres"
               autoComplete="new-password"
               className={`mt-1 max-w-xs ${campo}`}
             />
           </label>
 
-          <p className="mt-1 text-xs text-texto-tenue">
-            Si la escribes, el sistema no la vuelve a mostrar —tú ya la sabes—. Si la
-            dejas vacía, genera una y la muestra una sola vez.
-          </p>
-
           <div className="mt-3 flex gap-2">
             <button
               onClick={() => void crear()}
-              disabled={!nuevoUsuario || !nuevoNombre}
+              disabled={!nuevoUsuario || !nuevoNombre || nuevaClave.length < 8}
               className="rounded-lg bg-primario px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
             >
               Crear y generar contraseña
@@ -283,9 +239,9 @@ export function Usuarios() {
                 </td>
                 <td className="px-4 py-3 text-right">
                   <button
-                    onClick={() => void restablecer(u)}
+                    onClick={() => setCambiando(u)}
                     className="rounded p-1.5 text-texto-tenue hover:text-primario"
-                    title="Restablecer contraseña"
+                    title="Cambiar contraseña"
                   >
                     <KeyRound size={15} />
                   </button>
@@ -302,6 +258,17 @@ export function Usuarios() {
           </tbody>
         </table>
       </div>
+
+      {cambiando && (
+        <CambiarClave
+          titulo="Cambiar contraseña"
+          nombre={`${cambiando.nombre} · ${cambiando.usuario}`}
+          propia={false}
+          idUsuario={cambiando.id}
+          alCerrar={() => setCambiando(null)}
+          alTerminar={() => setError(null)}
+        />
+      )}
     </div>
   )
 }

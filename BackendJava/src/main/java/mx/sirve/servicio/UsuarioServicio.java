@@ -48,11 +48,14 @@ public class UsuarioServicio {
             throw new DatosInvalidosExcepcion("USUARIO_EXISTE", "Ese usuario ya existe.");
         }
 
-        String definitiva = (clave == null || clave.isBlank()) ? generarClave() : clave;
-        validarClave(definitiva);
+        if (clave == null || clave.isBlank()) {
+            throw new DatosInvalidosExcepcion("CLAVE_REQUERIDA",
+                    "Escribe la contraseña del usuario.");
+        }
+        validarClave(clave);
         usuarios.crear(usuario.trim(), nombre.trim(),
-                autenticacion.hashear(definitiva), validarRol(rol), true);
-        return definitiva;
+                autenticacion.hashear(clave), validarRol(rol), true);
+        return clave;
     }
 
     @Transactional
@@ -71,15 +74,19 @@ public class UsuarioServicio {
         if (!activo) usuarios.cerrarSesiones(id);
     }
 
-    /** Devuelve la contraseña nueva, que se muestra una sola vez. */
+    /**
+     * Asigna una contraseña nueva. La escribe quien administra, así que no se
+     * genera ni se devuelve: ya la conoce.
+     */
     @Transactional
-    public String restablecer(String id, String clave) {
+    public void restablecer(String id, String clave) {
         usuarios.porId(id).orElseThrow(() ->
                 new NoEncontradoExcepcion("NO_ENCONTRADO", "Ese usuario no existe."));
-        String definitiva = (clave == null || clave.isBlank()) ? generarClave() : clave;
-        validarClave(definitiva);
-        usuarios.cambiarClave(id, autenticacion.hashear(definitiva));
-        return definitiva;
+        if (clave == null || clave.isBlank()) {
+            throw new DatosInvalidosExcepcion("CLAVE_REQUERIDA", "Escribe la contraseña nueva.");
+        }
+        validarClave(clave);
+        usuarios.cambiarClave(id, autenticacion.hashear(clave));
     }
 
     @Transactional
@@ -118,11 +125,5 @@ public class UsuarioServicio {
         }
     }
 
-    /** Contraseña legible: sin caracteres que se confunden al dictarla. */
-    public String generarClave() {
-        SecureRandom azar = new SecureRandom();
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < 10; i++) sb.append(ALFABETO.charAt(azar.nextInt(ALFABETO.length())));
-        return sb.toString();
-    }
+
 }
