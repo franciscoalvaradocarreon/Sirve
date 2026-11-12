@@ -34,3 +34,21 @@ Dockerfile text eol=lf
 
 # Los archivos de datos que se exporten marcados como tales
 *.csv  text
+
+# ============================================================================
+# Lo que NO viaja al servidor
+#
+# «git archive» respeta estas marcas: lo que se despliega es solo lo que hace
+# falta para construir y operar. Las migraciones, la documentación y los
+# flujos de GitHub se quedan en el repositorio, que es donde se consultan.
+# ============================================================================
+/migraciones    export-ignore
+/mantenimiento  export-ignore
+/.github        export-ignore
+/docs           export-ignore
+/2021           export-ignore
+/AppMovil       export-ignore
+README.md       export-ignore
+DESPLIEGUE.md   export-ignore
+MANTENIMIENTO.md export-ignore
+Caddyfile.sitio export-ignore
