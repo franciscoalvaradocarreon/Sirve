@@ -91,6 +91,10 @@ services:
     networks:
       - interna
       - proxy
+      # La red del Caddy del SIH: por ahí entra el tráfico con TLS. Se declara
+      # aquí y no conectando el contenedor a mano, porque esa conexión se
+      # pierde cada vez que Caddy se recrea.
+      - caddy_sih
 
   # --------------------------------------------------------------------------
   # Deja el volumen de actas a nombre del usuario de la aplicación.
@@ -137,3 +141,8 @@ networks:
   #     docker network create proxy
   proxy:
     external: true
+
+  # Red que ya existe, creada por el compose del SIH.
+  caddy_sih:
+    external: true
+    name: sih-ia_default
