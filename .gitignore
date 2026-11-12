@@ -30,10 +30,13 @@ application-local.yml
 *.xls
 
 # --- Scripts de la base y documentación -------------------------------------
-# Se conservan en disco pero no se versionan: la base se instala con ellos y
-# el servidor los recibe aparte. Sin esta nota, un clon nuevo no podría crear
-# la base y el trabajo de esquema del CI se omite solo.
-db/
+# db/ SÍ se versiona: son los 34 archivos que levantan la base desde cero
+# —esquema, secciones, casillas, partidos y la creación de los roles— y hasta
+# ahora solo existían en dos discos, sin historial ni respaldo. No viaja al
+# servidor: lo excluye .gitattributes con export-ignore.
+#
+# docs/ se queda fuera: son 88 MB de capas SIG del INE, datos binarios que se
+# descargan aparte.
 docs/
 
 # --- Capas SIG --------------------------------------------------------------

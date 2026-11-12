@@ -43,6 +43,7 @@ Dockerfile text eol=lf
 # flujos de GitHub se quedan en el repositorio, que es donde se consultan.
 # ============================================================================
 /migraciones    export-ignore
+/db             export-ignore
 /mantenimiento  export-ignore
 /.github        export-ignore
 /docs           export-ignore
