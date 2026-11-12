@@ -88,6 +88,25 @@ jobs:
              rm -rf /tmp/sirve-build
             "
 
+      - name: Limpiar versiones viejas
+        # Cada liberación deja una imagen de 335 MB y caché de compilación.
+        # Sin esto, veinte despliegues se comen 7 GB de un disco de 30.
+        # Se conservan las tres últimas por si hay que volver atrás.
+        run: |
+          ssh -i ~/.ssh/id_deploy "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "set +e
+             ACTUAL=\$(sudo -n docker inspect sirve-p-app-1 --format '{{.Config.Image}}' | sed 's/.*://')
+             KEEP=\$(printf '%s\n' \"\$ACTUAL\" \$(sudo -n docker images --filter 'reference=sirve-p:*' \
+                     --format '{{.Tag}} {{.CreatedAt}}' | sort -k2 -r | awk '{print \$1}' | grep -v \"^\$ACTUAL\$\" | head -2))
+             for tag in \$(sudo -n docker images --filter 'reference=sirve-p:*' --format '{{.Tag}}'); do
+               echo \"\$KEEP\" | grep -qx \"\$tag\" || sudo -n docker rmi \"sirve-p:\$tag\" > /dev/null 2>&1
+             done
+             sudo -n docker builder prune -af > /dev/null 2>&1
+             sudo -n docker image prune -f > /dev/null 2>&1
+             echo 'Imágenes conservadas:'\$(echo \$KEEP | tr '\n' ' ')
+             df -h / | tail -1
+            "
+
       - name: Verificar que responde
         run: |
           ssh -i ~/.ssh/id_deploy "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
