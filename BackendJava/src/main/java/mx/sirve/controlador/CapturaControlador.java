@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import mx.sirve.modelo.dto.CapturaCrearDTO;
 import mx.sirve.modelo.dto.CapturaDTO;
 import mx.sirve.modelo.dto.VotoDTO;
+import mx.sirve.seguridad.JwtServicio;
 import mx.sirve.seguridad.PaseFiltro;
 import mx.sirve.servicio.CapturaServicio;
 import org.springframework.http.HttpStatus;
@@ -54,9 +55,11 @@ public class CapturaControlador {
     @PostMapping
     public ResponseEntity<CapturaDTO> guardar(
             @Valid @RequestBody CapturaCrearDTO datos,
-            @RequestAttribute(PaseFiltro.ATRIBUTO_CAPTURISTA) int idCapturista,
-            @RequestAttribute(PaseFiltro.ATRIBUTO_DISPOSITIVO) int idDispositivo) {
-        CapturaDTO guardada = capturaServicio.guardar(datos, idCapturista, idDispositivo);
+            @RequestAttribute(name = PaseFiltro.ATRIBUTO_CAPTURISTA, required = false) Integer idCapturista,
+            @RequestAttribute(name = PaseFiltro.ATRIBUTO_DISPOSITIVO, required = false) Integer idDispositivo,
+            @RequestAttribute(name = JwtServicio.ATRIBUTO_USUARIO, required = false) JwtServicio.DatosToken sesion) {
+        CapturaDTO guardada = capturaServicio.guardar(datos, idCapturista, idDispositivo,
+                sesion == null ? null : sesion.idUsuario());
         return ResponseEntity.status(HttpStatus.CREATED).body(guardada);
     }
 }

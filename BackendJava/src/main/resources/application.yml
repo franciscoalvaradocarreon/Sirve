@@ -64,6 +64,16 @@ app:
   actas:
     ruta: ${ACTAS_RUTA:/datos/actas}
 
+  # Firma de los tokens del escritorio. Debe tener 32 caracteres o más y ser
+  # distinta en cada instalación: quien la conozca puede fabricar tokens.
+  jwt:
+    clave: ${JWT_CLAVE:desarrollo-solamente-cambiar-en-produccion-32}
+    horas: ${JWT_HORAS:12}
+
+  # Contraseña del primer administrador, solo para el arranque inicial.
+  admin:
+    clave: ${ADMIN_CLAVE:}
+
 management:
   endpoints:
     web:

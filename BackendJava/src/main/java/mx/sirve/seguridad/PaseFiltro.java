@@ -33,9 +33,43 @@ public class PaseFiltro extends OncePerRequestFilter {
     public static final String ATRIBUTO_DISPOSITIVO = "idDispositivo";
 
     private final DispositivoServicio dispositivos;
+    private final JwtServicio jwt;
+    private final mx.sirve.repositorio.UsuarioRepositorio usuarios;
 
-    public PaseFiltro(DispositivoServicio dispositivos) {
+    public PaseFiltro(DispositivoServicio dispositivos, JwtServicio jwt,
+                      mx.sirve.repositorio.UsuarioRepositorio usuarios) {
         this.dispositivos = dispositivos;
+        this.jwt = jwt;
+        this.usuarios = usuarios;
+    }
+
+    /**
+     * ¿Quien pide es un usuario del escritorio con permiso de capturar?
+     *
+     * Si lo es, deja la sesión en la petición para que el controlador sepa a
+     * quién atribuir la captura. La comprobación de rol se repite aquí a
+     * propósito: este filtro corre antes que el de sesión en estas rutas.
+     */
+    private boolean esSesionDeCaptura(HttpServletRequest peticion) {
+        String cabecera = peticion.getHeader("Authorization");
+        if (cabecera == null || !cabecera.regionMatches(true, 0, "Bearer ", 0, 7)) return false;
+
+        JwtServicio.DatosToken datos = jwt.leer(cabecera.substring(7).trim());
+        if (datos == null) return false;
+
+        boolean captura = switch (datos.rol()) {
+            case "ADMIN", "COORDINADOR", "OPERADOR" -> true;
+            default -> false;
+        };
+        if (!captura) return false;
+
+        // El token debe seguir vigente: si el usuario cerró sesión o cambió su
+        // contraseña, el contador ya no coincide.
+        var version = usuarios.versionToken(datos.idUsuario());
+        if (version.isEmpty() || version.get() != datos.version()) return false;
+
+        peticion.setAttribute(JwtServicio.ATRIBUTO_USUARIO, datos);
+        return true;
     }
 
     @Override
@@ -52,6 +86,25 @@ public class PaseFiltro extends OncePerRequestFilter {
         Optional<int[]> quien = dispositivos.autenticar(pase);
 
         if (quien.isEmpty()) {
+            /*
+             * Sin pase, pero puede ser el escritorio.
+             *
+             * La captura también se hace desde computadora, con la sesión del
+             * usuario y su rol. Si viene un token válido de un rol que captura,
+             * se deja pasar: no hay capturista ni dispositivo, y el controlador
+             * registra al usuario en `capturada_por` con origen PORTAL.
+             *
+             * Se acepta solo cuando NO hay pase: un teléfono con pase inválido
+             * sigue rechazado, para que un aparato dado de baja no se cuele con
+             * la sesión de otra persona.
+             */
+            // Se prueba igual aunque venga algo en la cabecera: el método
+            // valida el token y su rol, así que un pase inválido no pasa.
+            if (esSesionDeCaptura(peticion)) {
+                cadena.doFilter(peticion, respuesta);
+                return;
+            }
+
             respuesta.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             respuesta.setContentType("application/json;charset=UTF-8");
             // Una sola línea: un salto dentro de la cadena no es JSON válido.

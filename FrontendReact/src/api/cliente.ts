@@ -1,6 +1,7 @@
 import axios, { AxiosError } from 'axios'
 import type { ErrorContrato } from '../types'
 import { borrarSesion, leerPase } from '../utils/sesion'
+import { leerToken } from '../utils/sesionEscritorio'
 
 /**
  * Cliente HTTP único.
@@ -33,13 +34,28 @@ export class ErrorApi extends Error {
   }
 }
 
+/*
+ * Dos credenciales conviven en el mismo cliente.
+ *
+ * El teléfono manda su pase; el escritorio, el token de su sesión. Se elige
+ * el pase primero porque las rutas del móvil solo entienden ese, y porque un
+ * navegador de escritorio nunca lo tiene guardado.
+ */
 cliente.interceptors.request.use((configuracion) => {
   const pase = leerPase()
   if (pase) {
     configuracion.headers.Authorization = `Bearer ${pase}`
+    return configuracion
+  }
+  const token = leerToken()
+  if (token) {
+    configuracion.headers.Authorization = `Bearer ${token}`
   }
   return configuracion
 })
+
+/** Aviso de que la sesión del escritorio dejó de servir. */
+export const EVENTO_SESION_ESCRITORIO = 'sirve:sesion-escritorio-vencida'
 
 /**
  * Aviso de que el pase dejó de servir.
@@ -62,8 +78,12 @@ cliente.interceptors.response.use(
      * fallaban en silencio.
      */
     if (estado === 401 && cuerpo?.codigo === 'NO_AUTENTICADO') {
-      borrarSesion()
-      window.dispatchEvent(new Event(EVENTO_SESION_EXPIRADA))
+      if (leerPase()) {
+        borrarSesion()
+        window.dispatchEvent(new Event(EVENTO_SESION_EXPIRADA))
+      } else {
+        window.dispatchEvent(new Event(EVENTO_SESION_ESCRITORIO))
+      }
     }
 
     return Promise.reject(

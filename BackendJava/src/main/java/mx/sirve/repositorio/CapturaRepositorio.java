@@ -60,15 +60,28 @@ public class CapturaRepositorio {
      * El conflicto se declara por columnas y no por nombre de restricción: si
      * mañana cambia el nombre del índice, esto sigue funcionando.
      */
+    /**
+     * Alta o reemplazo de la cabecera de una captura.
+     *
+     * `idCapturista` e `idDispositivo` llegan nulos cuando la captura se hizo
+     * desde el escritorio: ahí quien responde es un usuario, que se guarda en
+     * `capturada_por`, y el origen queda como PORTAL. Desde el teléfono vienen
+     * los dos y el origen es APP.
+     */
     public long guardarCabecera(String idCliente, int idCasilla, int idEleccion,
                                 int totalActa, int noRegistrados, int nulos,
                                 int sumaOpciones, String autorTexto,
-                                int idCapturista, int idDispositivo) {
+                                Integer idCapturista, Integer idDispositivo,
+                                String idUsuario) {
         Long id = jdbc.queryForObject("""
                 INSERT INTO sirve.captura (id_cliente, id_casilla, id_eleccion, total_acta,
                                            no_registrados, nulos, suma_opciones, autor_texto,
-                                           id_capturista, id_dispositivo)
-                VALUES (?::uuid, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                           id_capturista, id_dispositivo,
+                                           origen, capturada_por)
+                VALUES (?::uuid, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                        CASE WHEN ?::uuid IS NULL THEN 'APP'::sirve.origen_captura
+                             ELSE 'PORTAL'::sirve.origen_captura END,
+                        ?::uuid)
                 ON CONFLICT (id_casilla, id_eleccion) DO UPDATE
                    SET total_acta     = EXCLUDED.total_acta,
                        no_registrados = EXCLUDED.no_registrados,
@@ -77,11 +90,13 @@ public class CapturaRepositorio {
                        autor_texto    = EXCLUDED.autor_texto,
                        id_capturista  = EXCLUDED.id_capturista,
                        id_dispositivo = EXCLUDED.id_dispositivo,
+                       origen         = EXCLUDED.origen,
+                       capturada_por  = EXCLUDED.capturada_por,
                        recibida_en    = now()
                 RETURNING id
                 """, Long.class,
                 idCliente, idCasilla, idEleccion, totalActa, noRegistrados, nulos,
-                sumaOpciones, autorTexto, idCapturista, idDispositivo);
+                sumaOpciones, autorTexto, idCapturista, idDispositivo, idUsuario, idUsuario);
         return id == null ? 0L : id;
     }
 

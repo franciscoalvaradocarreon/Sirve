@@ -124,6 +124,7 @@ public class DispositivoServicio {
 
     /** Devuelve [idDispositivo, idCapturista] si el pase es válido y está activo. */
     @Transactional(readOnly = true)
+
     public Optional<int[]> autenticar(String pase) {
         if (pase == null || pase.isBlank()) return Optional.empty();
         return dispositivos.porPase(Pases.hash(pase.trim()));

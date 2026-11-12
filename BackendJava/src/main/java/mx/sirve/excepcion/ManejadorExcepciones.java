@@ -74,6 +74,12 @@ public class ManejadorExcepciones {
      * Sin este manejador salía un 500 genérico y había que ir al registro del
      * servidor para descubrir que era un permiso y no un fallo de la lógica.
      */
+    /** El rol del usuario no alcanza esa operación: 403, no 400. */
+    @ExceptionHandler(SinPermisoExcepcion.class)
+    public ResponseEntity<Map<String, Object>> sinPermiso(SinPermisoExcepcion e) {
+        return cuerpo(HttpStatus.FORBIDDEN, e.getCodigo(), e.getMessage(), null);
+    }
+
     @ExceptionHandler(DataAccessException.class)
     public ResponseEntity<Map<String, Object>> errorDeBase(DataAccessException e) {
         String estado = estadoSql(e);

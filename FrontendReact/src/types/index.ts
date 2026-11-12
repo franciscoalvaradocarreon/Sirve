@@ -202,3 +202,31 @@ export interface CodigoEnrolamiento {
   codigo: string
   nombre: string | null
 }
+
+/** Menú tal como lo manda el servidor: sin icono, con su nombre. */
+export interface MenuServidor {
+  id: number
+  clave: string
+  etiqueta: string
+  ruta: string | null
+  icono: string | null
+  hijos: MenuServidor[]
+}
+
+/** Quién está dentro del escritorio. */
+export interface UsuarioSesion {
+  id: string
+  usuario: string
+  nombre: string
+  rol: string
+  rol_nombre: string
+  activo: boolean
+  ultimo_acceso: string | null
+}
+
+/** Lo que devuelve el inicio de sesión. */
+export interface RespuestaLogin {
+  token: string
+  usuario: UsuarioSesion
+  menus: MenuServidor[]
+}

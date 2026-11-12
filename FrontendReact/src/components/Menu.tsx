@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
-import { ChevronDown, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
-import { MENU } from '../utils/menu'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { ChevronDown, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { NOMBRE_SISTEMA, DESCRIPCION_SISTEMA } from '../utils/tema'
-import type { ElementoMenu } from '../types'
+import { iconoPorNombre } from '../utils/iconos'
+import { useSesion } from '../context/SesionContext'
 
 const CLAVE_ABIERTOS = 'sirve-menu-abiertos'
 
@@ -15,14 +15,19 @@ interface Props {
 /**
  * Menú lateral multinivel.
  *
+ * Las entradas vienen del servidor, ya filtradas por el rol: lo que no está
+ * concedido no llega, así que no hay pantallas que el API después rechace.
+ *
  * Los grupos se abren y se cierran, y el estado se recuerda entre sesiones.
  * El grupo que contiene la ruta activa se abre solo, para que al recargar no
  * aparezca cerrado.
  */
 export function Menu({ colapsado, onAlternar }: Props) {
   const { pathname } = useLocation()
+  const navegar = useNavigate()
+  const { menus, usuario, salir } = useSesion()
 
-  const [abiertos, setAbiertos] = useState<string[]>(() => {
+  const [abiertos, setAbiertos] = useState<number[]>(() => {
     try {
       return JSON.parse(localStorage.getItem(CLAVE_ABIERTOS) ?? '[]')
     } catch {
@@ -31,18 +36,18 @@ export function Menu({ colapsado, onAlternar }: Props) {
   })
 
   useEffect(() => {
-    const grupo = MENU.find((item) => item.hijos?.some((h) => h.ruta === pathname))
+    const grupo = menus.find((item) => item.hijos?.some((h) => h.ruta === pathname))
     if (grupo && !abiertos.includes(grupo.id)) {
       setAbiertos((prev) => [...prev, grupo.id])
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname])
+  }, [pathname, menus])
 
   useEffect(() => {
     localStorage.setItem(CLAVE_ABIERTOS, JSON.stringify(abiertos))
   }, [abiertos])
 
-  const alternarGrupo = (id: string) =>
+  const alternarGrupo = (id: number) =>
     setAbiertos((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
 
   const clasesEnlace = (activo: boolean) =>
@@ -52,71 +57,6 @@ export function Menu({ colapsado, onAlternar }: Props) {
         ? 'bg-primario-suave text-primario-texto font-medium'
         : 'text-texto-tenue hover:bg-fondo-alt hover:text-texto',
     ].join(' ')
-
-  const pintarElemento = (item: ElementoMenu) => {
-    const Icono = item.icono
-    const tieneHijos = !!item.hijos?.length
-    const abierto = abiertos.includes(item.id)
-    const activoHijo = item.hijos?.some((h) => h.ruta === pathname) ?? false
-
-    if (tieneHijos) {
-      return (
-        <li key={item.id}>
-          <button
-            onClick={() => alternarGrupo(item.id)}
-            title={colapsado ? item.etiqueta : undefined}
-            className={[
-              'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
-              activoHijo
-                ? 'text-primario-texto font-medium'
-                : 'text-texto-tenue hover:bg-fondo-alt hover:text-texto',
-            ].join(' ')}
-          >
-            <Icono size={18} className="shrink-0" />
-            {!colapsado && (
-              <>
-                <span className="flex-1 text-left">{item.etiqueta}</span>
-                <ChevronDown
-                  size={15}
-                  className={`shrink-0 transition-transform ${abierto ? 'rotate-180' : ''}`}
-                />
-              </>
-            )}
-          </button>
-
-          {!colapsado && abierto && (
-            <ul className="mt-1 ml-4 space-y-1 border-l border-borde pl-3">
-              {item.hijos!.map((hijo) => {
-                const IconoHijo = hijo.icono
-                return (
-                  <li key={hijo.id}>
-                    <NavLink to={hijo.ruta!} end className={({ isActive }) => clasesEnlace(isActive)}>
-                      <IconoHijo size={16} className="shrink-0" />
-                      <span>{hijo.etiqueta}</span>
-                    </NavLink>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </li>
-      )
-    }
-
-    return (
-      <li key={item.id}>
-        <NavLink
-          to={item.ruta!}
-          end
-          title={colapsado ? item.etiqueta : undefined}
-          className={({ isActive }) => clasesEnlace(isActive)}
-        >
-          <Icono size={18} className="shrink-0" />
-          {!colapsado && <span>{item.etiqueta}</span>}
-        </NavLink>
-      </li>
-    )
-  }
 
   return (
     <aside
@@ -138,8 +78,95 @@ export function Menu({ colapsado, onAlternar }: Props) {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-2 pb-4">
-        <ul className="space-y-1">{MENU.map(pintarElemento)}</ul>
+        <ul className="space-y-1">
+          {menus.map((item) => {
+            const Icono = iconoPorNombre(item.icono)
+            const tieneHijos = item.hijos.length > 0
+            const abierto = abiertos.includes(item.id)
+            const activoHijo = item.hijos.some((h) => h.ruta === pathname)
+
+            if (tieneHijos) {
+              return (
+                <li key={item.id}>
+                  <button
+                    onClick={() => alternarGrupo(item.id)}
+                    title={colapsado ? item.etiqueta : undefined}
+                    className={[
+                      'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+                      activoHijo
+                        ? 'text-primario-texto font-medium'
+                        : 'text-texto-tenue hover:bg-fondo-alt hover:text-texto',
+                    ].join(' ')}
+                  >
+                    <Icono size={18} className="shrink-0" />
+                    {!colapsado && (
+                      <>
+                        <span className="flex-1 text-left">{item.etiqueta}</span>
+                        <ChevronDown
+                          size={15}
+                          className={`shrink-0 transition-transform ${abierto ? 'rotate-180' : ''}`}
+                        />
+                      </>
+                    )}
+                  </button>
+
+                  {!colapsado && abierto && (
+                    <ul className="mt-1 ml-4 space-y-1 border-l border-borde pl-3">
+                      {item.hijos.map((hijo) => {
+                        const IconoHijo = iconoPorNombre(hijo.icono)
+                        return (
+                          <li key={hijo.id}>
+                            <NavLink
+                              to={hijo.ruta ?? '/'}
+                              end
+                              className={({ isActive }) => clasesEnlace(isActive)}
+                            >
+                              <IconoHijo size={16} className="shrink-0" />
+                              <span>{hijo.etiqueta}</span>
+                            </NavLink>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
+                </li>
+              )
+            }
+
+            return (
+              <li key={item.id}>
+                <NavLink
+                  to={item.ruta ?? '/'}
+                  end
+                  title={colapsado ? item.etiqueta : undefined}
+                  className={({ isActive }) => clasesEnlace(isActive)}
+                >
+                  <Icono size={18} className="shrink-0" />
+                  {!colapsado && <span>{item.etiqueta}</span>}
+                </NavLink>
+              </li>
+            )
+          })}
+        </ul>
       </nav>
+
+      {/* Quién está dentro y cómo salir. Va abajo, lejos de los enlaces, para
+          no pulsarlo por error al navegar. */}
+      {!colapsado && usuario && (
+        <div className="border-t border-borde px-4 py-3">
+          <p className="truncate text-xs font-medium text-texto">{usuario.nombre}</p>
+          <p className="truncate text-xs text-texto-tenue">{usuario.rol_nombre}</p>
+        </div>
+      )}
+
+      <button
+        onClick={() => void salir().then(() => navegar('/login', { replace: true }))}
+        className="flex items-center gap-3 border-t border-borde px-4 py-3 text-sm text-texto-tenue hover:text-red-600"
+        title="Cerrar sesión"
+      >
+        <LogOut size={18} className="shrink-0" />
+        {!colapsado && <span>Cerrar sesión</span>}
+      </button>
 
       <button
         onClick={onAlternar}

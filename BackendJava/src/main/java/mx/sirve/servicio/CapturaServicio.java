@@ -55,7 +55,8 @@ public class CapturaServicio {
      * puede recapturar y la anterior se pisa.
      */
     @Transactional
-    public CapturaDTO guardar(CapturaCrearDTO datos, int idCapturista, int idDispositivo) {
+    public CapturaDTO guardar(CapturaCrearDTO datos, Integer idCapturista, Integer idDispositivo,
+                              String idUsuario) {
         validar(datos);
 
         /*
@@ -63,7 +64,10 @@ public class CapturaServicio {
          * manipule la petición, solo puede escribir donde tiene asignación:
          * un teléfono robado no alcanza a las casillas de los demás.
          */
-        if (!capturistaRepositorio.cubre(idCapturista, datos.idCasilla())) {
+        // Desde el teléfono, el pase limita a las casillas asignadas. Desde el
+        // escritorio no hay capturista: el acceso lo decide el rol, y quien
+        // responde queda en `capturada_por`.
+        if (idCapturista != null && !capturistaRepositorio.cubre(idCapturista, datos.idCasilla())) {
             throw new DatosInvalidosExcepcion("CASILLA_NO_ASIGNADA",
                     "Esta casilla no está entre las que tienes asignadas.");
         }
@@ -84,7 +88,8 @@ public class CapturaServicio {
                     suma,
                     datos.autorTexto(),
                     idCapturista,
-                    idDispositivo);
+                    idDispositivo,
+                    idUsuario);
         } catch (DataIntegrityViolationException e) {
             // La llave foránea (id_casilla, id_eleccion) rechaza casillas que no
             // están declaradas para esa elección.

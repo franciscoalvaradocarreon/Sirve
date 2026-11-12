@@ -19,14 +19,25 @@ import { ProcesoProveedor } from './movil/ProcesoContext'
 import { MovilCaptura } from './movil/MovilCaptura'
 import { MovilPendientes } from './movil/MovilPendientes'
 import { TemaProveedor } from './context/TemaContext'
+import { SesionProveedor, useSesion } from './context/SesionContext'
+import { Login } from './components/Login'
+import { Usuarios } from './components/Usuarios'
+
+/** Deja pasar solo con sesión iniciada; si no, manda al login. */
+function RutaPrivada({ children }: { children: React.ReactNode }) {
+  const { usuario } = useSesion()
+  return usuario ? <>{children}</> : <Navigate to="/login" replace />
+}
 
 export default function App() {
   return (
     <TemaProveedor>
+      <SesionProveedor>
       <BrowserRouter>
         <Routes>
+          <Route path="/login" element={<Login />} />
           {/* Escritorio: menú lateral */}
-          <Route element={<Layout />}>
+          <Route element={<RutaPrivada><Layout /></RutaPrivada>}>
             <Route index element={<Inicio />} />
             <Route path="/catalogos/procesos" element={<Procesos />} />
             <Route path="/catalogos/elecciones" element={<Elecciones />} />
@@ -42,6 +53,7 @@ export default function App() {
             <Route path="/capturistas" element={<Capturistas />} />
             <Route path="/capturistas/nuevo" element={<CapturistaFormulario />} />
             <Route path="/capturistas/:id" element={<CapturistaFormulario />} />
+            <Route path="/usuarios" element={<Usuarios />} />
           </Route>
 
           {/* Teléfono y tableta: árbol propio, sin menú lateral, con
@@ -61,6 +73,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
+      </SesionProveedor>
     </TemaProveedor>
   )
 }
