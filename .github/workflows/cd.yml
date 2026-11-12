@@ -65,14 +65,24 @@ jobs:
 
           ssh -i ~/.ssh/id_deploy "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
             "set -e
-             cd '${{ secrets.RUTA_DESPLIEGUE }}'
-             tar -x -f /tmp/sirve-src.tar
+             # Se construye en /tmp y se borra al terminar: en la carpeta de
+             # despliegue solo quedan el compose y los archivos de operación.
+             # El código viaja, se compila y desaparece; lo que permanece es la
+             # imagen, que es lo que realmente ejecuta.
+             rm -rf /tmp/sirve-build
+             mkdir -p /tmp/sirve-build
+             tar -x -f /tmp/sirve-src.tar -C /tmp/sirve-build
              rm -f /tmp/sirve-src.tar
+             cd /tmp/sirve-build
              echo 'Construyendo sirve-p:${{ inputs.version }}…'
              # «sudo env» y no «VAR=… sudo»: sudo reinicia el entorno y la
              # variable se perdería, dejando el compose con el nombre del .env.
              sudo -n env IMAGEN_APP='sirve-p:${{ inputs.version }}' docker compose build app
+             # El compose de producción se actualiza solo si cambió en el repo.
+             sudo -n cp docker-compose.yml '${{ secrets.RUTA_DESPLIEGUE }}/docker-compose.yml'
+             cd '${{ secrets.RUTA_DESPLIEGUE }}'
              sudo -n env IMAGEN_APP='sirve-p:${{ inputs.version }}' docker compose up -d --no-build app
+             rm -rf /tmp/sirve-build
             "
 
       - name: Verificar que responde

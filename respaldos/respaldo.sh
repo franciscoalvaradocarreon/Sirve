@@ -83,3 +83,38 @@ fi
 TOTAL=$(find "$DESTINO" -maxdepth 1 -name 'sirve-*.dump' -type f | wc -l)
 OCUPA=$(du -sh "$DESTINO" | cut -f1)
 log "Respaldos conservados: $TOTAL · ocupan $OCUPA"
+
+# --- copia externa en Oracle Object Storage --------------------------------
+# La base y las actas viven en el mismo disco del servidor: si ese disco
+# muere, se pierden las dos. Esta copia queda fuera, en un bucket privado.
+# La identidad la pone la instancia (instance_principal): no hay llaves
+# guardadas en disco.
+BUCKET="sirve-sih-respaldos"
+REGION="mx-queretaro-1"
+OCI="/usr/local/bin/oci"
+
+if [ -x "$OCI" ]; then
+    if "$OCI" os object put --auth instance_principal --region "$REGION" \
+            --bucket-name "$BUCKET" --file "$ARCHIVO" \
+            --name "sirve/base/$(basename "$ARCHIVO")" > /dev/null 2>&1; then
+        log "Copia externa subida: sirve/base/$(basename "$ARCHIVO")"
+    else
+        log "ERROR: no se pudo subir la copia externa. El respaldo local SÍ está."
+    fi
+else
+    log "AVISO: el CLI de Oracle no está instalado; sin copia externa."
+fi
+
+# --- actas: solo las nuevas ------------------------------------------------
+# --no-overwrite hace que el CLI salte lo que ya está: la primera vez sube
+# todo, las siguientes solo las actas del día. Con 700 MB por elección, volver
+# a subirlas cada noche sería absurdo.
+ACTAS="/var/lib/docker/volumes/sirve-p_actas/_data"
+
+if [ -x "$OCI" ] && [ -d "$ACTAS" ]; then
+    SUBIDAS=$("$OCI" os object bulk-upload --auth instance_principal \
+                --region "$REGION" --bucket-name "$BUCKET" \
+                --src-dir "$ACTAS" --prefix "sirve/actas/" \
+                --no-overwrite 2>/dev/null | grep -c '"status": "uploaded"' || true)
+    log "Actas nuevas en el bucket: ${SUBIDAS:-0}"
+fi
