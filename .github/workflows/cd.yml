@@ -77,7 +77,10 @@ jobs:
              echo 'Construyendo sirve-p:${{ inputs.version }}…'
              # «sudo env» y no «VAR=… sudo»: sudo reinicia el entorno y la
              # variable se perdería, dejando el compose con el nombre del .env.
-             sudo -n env IMAGEN_APP='sirve-p:${{ inputs.version }}' docker compose build app
+             # El .env no viaja en el archivo por seguridad: se toma del que ya
+             # está en la carpeta de despliegue, sin copiarlo a /tmp.
+             sudo -n env IMAGEN_APP='sirve-p:${{ inputs.version }}' \
+               docker compose --env-file '${{ secrets.RUTA_DESPLIEGUE }}/.env' build app
              # El compose de producción se actualiza solo si cambió en el repo.
              sudo -n cp docker-compose.yml '${{ secrets.RUTA_DESPLIEGUE }}/docker-compose.yml'
              cd '${{ secrets.RUTA_DESPLIEGUE }}'
