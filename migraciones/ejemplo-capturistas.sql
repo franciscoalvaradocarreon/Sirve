@@ -1,8 +1,11 @@
 -- =====================================================================
--- SIRVE-P · Datos de ejemplo: capturistas con diez casillas cada uno
+-- SIRVE-P · Datos de ejemplo: capturistas con diez secciones cada uno
 -- ---------------------------------------------------------------------
--- Tres capturistas de Monterrey, cada uno con diez casillas de la elección
--- de Gobernatura 2027, y un teléfono pendiente de enrolar por persona.
+-- Tres capturistas de Monterrey, cada uno con diez secciones de 2027, y un
+-- teléfono pendiente de enrolar por persona.
+--
+-- Se asignan SECCIONES, no casillas: así funciona el sistema desde que la
+-- asignación es por sección y las casillas salen de ellas.
 --
 -- Los códigos de enrolamiento son de mentira y están escritos aquí a
 -- propósito, para poder probar. En producción se generan desde la pantalla
@@ -16,7 +19,7 @@
 
 BEGIN;
 
--- Limpieza: al borrar el capturista caen en cascada sus casillas y teléfonos.
+-- Limpieza: al borrar el capturista caen en cascada sus secciones y teléfonos.
 DELETE FROM sirve.capturista WHERE nombre LIKE 'PRUEBA %';
 
 INSERT INTO sirve.capturista (nombre, telefono) VALUES
@@ -25,20 +28,17 @@ INSERT INTO sirve.capturista (nombre, telefono) VALUES
     ('PRUEBA ANA CECILIA TREVIÑO', '8112345680');
 
 /*
- * Diez casillas para cada uno.
+ * Diez secciones para cada uno.
  *
- * Se toman de Monterrey, en orden de sección y casilla, y se reparten por
- * bloques de diez. Se usa la elección 9 (Gobernatura 2027) para que las
- * casillas estén declaradas en `casilla_eleccion`: si no lo estuvieran, la
- * captura se rechazaría por la llave de la tabla.
+ * Se toman de Monterrey, en orden, y se reparten por bloques de diez. Basta
+ * con que la sección pertenezca al proceso de 2027: las casillas salen de
+ * ella, no hace falta enumerarlas.
  */
 WITH ordenadas AS (
-    SELECT k.id,
-           row_number() OVER (ORDER BY length(s.clave), s.clave, k.clave) AS n
-      FROM sirve.casilla k
-      JOIN sirve.seccion s ON s.id = k.id_seccion
+    SELECT s.id,
+           row_number() OVER (ORDER BY length(s.clave), s.clave) AS n
+      FROM sirve.seccion s
       JOIN sirve.proceso_electoral p ON p.id = s.id_proceso AND p.anio = 2027
-      JOIN sirve.casilla_eleccion ce ON ce.id_casilla = k.id AND ce.id_eleccion = 9
      WHERE s.id_municipio = (SELECT id FROM sirve.municipio WHERE nombre = 'MONTERREY')
 ),
 personas AS (
@@ -46,7 +46,7 @@ personas AS (
       FROM sirve.capturista
      WHERE nombre LIKE 'PRUEBA %'
 )
-INSERT INTO sirve.capturista_casilla (id_capturista, id_casilla)
+INSERT INTO sirve.capturista_seccion (id_capturista, id_seccion)
 SELECT p.id, o.id
   FROM personas p
   JOIN ordenadas o ON o.n > (p.i - 1) * 10 AND o.n <= p.i * 10;
@@ -75,19 +75,21 @@ COMMIT;
 -- ---------------------------------------------------------------------
 -- Comprobación
 -- ---------------------------------------------------------------------
-SELECT c.id, c.nombre, count(cc.id_casilla) AS casillas,
+SELECT c.id, c.nombre, count(cs.id_seccion) AS secciones,
        (SELECT count(*) FROM sirve.dispositivo d WHERE d.id_capturista = c.id) AS telefonos
   FROM sirve.capturista c
-  LEFT JOIN sirve.capturista_casilla cc ON cc.id_capturista = c.id
+  LEFT JOIN sirve.capturista_seccion cs ON cs.id_capturista = c.id
  WHERE c.nombre LIKE 'PRUEBA %'
  GROUP BY c.id, c.nombre
  ORDER BY c.id;
 
--- Qué casillas le tocaron a cada quien
-SELECT c.nombre, s.clave AS seccion, k.clave AS casilla
+-- Qué secciones le tocaron a cada quien, y cuántas casillas aportan
+SELECT c.nombre, s.clave AS seccion,
+       count(k.id) AS casillas
   FROM sirve.capturista c
-  JOIN sirve.capturista_casilla cc ON cc.id_capturista = c.id
-  JOIN sirve.casilla k ON k.id = cc.id_casilla
-  JOIN sirve.seccion s ON s.id = k.id_seccion
+  JOIN sirve.capturista_seccion cs ON cs.id_capturista = c.id
+  JOIN sirve.seccion s ON s.id = cs.id_seccion
+  LEFT JOIN sirve.casilla k ON k.id_seccion = s.id
  WHERE c.nombre LIKE 'PRUEBA %'
- ORDER BY c.nombre, length(s.clave), s.clave, k.clave;
+ GROUP BY c.nombre, s.clave
+ ORDER BY c.nombre, length(s.clave), s.clave;
