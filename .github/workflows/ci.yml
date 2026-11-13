@@ -157,9 +157,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # La carpeta db/ no se versiona: vive fuera del repositorio. Si no está,
-      # la prueba de esquema no aplica y se omite con un aviso, en lugar de
-      # fallar por un archivo que este repositorio no contiene.
+      # db/ sí se versiona desde que se recuperó como fuente del esquema. La
+      # comprobación se conserva por si alguien la excluye otra vez: en ese
+      # caso la prueba se omite con un aviso en vez de fallar.
       - name: ¿Están los scripts de la base?
         id: hay
         run: |
@@ -195,6 +195,24 @@ jobs:
   imagen:
     name: Imagen Docker
     runs-on: ubuntu-latest
+    # La aplicación ya no arranca sin base: al iniciar comprueba si hay
+    # usuarios y crea el primero. Sin un PostgreSQL con esquema, el
+    # contenedor moría al arrancar y la prueba fallaba por una razón que no
+    # tiene que ver con la imagen.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: prueba
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGPASSWORD: prueba
     steps:
       - uses: actions/checkout@v4
 
@@ -210,9 +228,25 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Preparar una base con esquema
+        run: |
+          set -e
+          psql -h 127.0.0.1 -U postgres -c 'CREATE DATABASE "SIRVE";'
+          for archivo in $(ls db/*.sql 2>/dev/null | sort); do
+            psql -h 127.0.0.1 -U postgres -d SIRVE -v ON_ERROR_STOP=1 -q -f "$archivo"
+          done
+          # Usuarios y menús: la aplicación los consulta al arrancar.
+          psql -h 127.0.0.1 -U postgres -d SIRVE -v ON_ERROR_STOP=1 -q \
+            -f migraciones/005-usuarios.sql
+
       - name: Comprobar que la imagen arranca
         run: |
-          docker run -d --name prueba -e DB_PASSWORD=x -p 8098:8080 sirve-p:ci
+          docker run -d --name prueba --network host \
+            -e DB_URL=jdbc:postgresql://127.0.0.1:5432/SIRVE \
+            -e DB_USER=postgres \
+            -e DB_PASSWORD=prueba \
+            -e JWT_CLAVE=clave-de-prueba-en-integracion-continua-32 \
+            sirve-p:ci
           for i in $(seq 1 40); do
             if curl -fsS http://127.0.0.1:8098/actuator/health/liveness > /dev/null 2>&1; then
               echo "La imagen arranca y responde."
