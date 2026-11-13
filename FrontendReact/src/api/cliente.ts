@@ -41,12 +41,32 @@ export class ErrorApi extends Error {
  * el pase primero porque las rutas del móvil solo entienden ese, y porque un
  * navegador de escritorio nunca lo tiene guardado.
  */
+/*
+ * Rutas que solo entienden el pase del teléfono.
+ *
+ * Ahí NO se manda el token del escritorio, aunque lo haya: el navegador de la
+ * misma máquina puede tener las dos cosas —la sesión web y la app del
+ * teléfono—, y colar el token en una ruta del móvil hacía que el servidor la
+ * rechazara y, peor, que se cerrara la sesión del escritorio.
+ */
+const RUTAS_DEL_MOVIL = [
+  '/capturas',
+  '/mis-casillas',
+  '/sesion',
+  '/actas',
+  '/dispositivos',
+]
+
+const esRutaDelMovil = (url: string | undefined) =>
+  !!url && RUTAS_DEL_MOVIL.some((r) => url === r || url.startsWith(r + '/') || url.startsWith(r + '?'))
+
 cliente.interceptors.request.use((configuracion) => {
-  const pase = leerPase()
-  if (pase) {
-    configuracion.headers.Authorization = `Bearer ${pase}`
+  if (esRutaDelMovil(configuracion.url)) {
+    const pase = leerPase()
+    if (pase) configuracion.headers.Authorization = `Bearer ${pase}`
     return configuracion
   }
+
   const token = leerToken()
   if (token) {
     configuracion.headers.Authorization = `Bearer ${token}`
@@ -77,8 +97,14 @@ cliente.interceptors.response.use(
      * aplicación seguía mostrando la captura con datos guardados y los envíos
      * fallaban en silencio.
      */
+    /*
+     * Un 401 se interpreta según la ruta que falló, no según lo que haya
+     * guardado: si falló una ruta del teléfono, se cierra la sesión del
+     * teléfono; si falló una del escritorio, la del escritorio. Antes se
+     * miraba el pase guardado, y un fallo del móvil cerraba la sesión web.
+     */
     if (estado === 401 && cuerpo?.codigo === 'NO_AUTENTICADO') {
-      if (leerPase()) {
+      if (esRutaDelMovil(error.config?.url)) {
         borrarSesion()
         window.dispatchEvent(new Event(EVENTO_SESION_EXPIRADA))
       } else {
