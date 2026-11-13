@@ -74,6 +74,7 @@ export function Usuarios() {
   async function cambiarEstado(u: UsuarioSesion) {
     try {
       await usuarioServicio.actualizar(u.id, {
+        usuario: u.usuario,
         nombre: u.nombre,
         rol: u.rol,
         activo: !u.activo,

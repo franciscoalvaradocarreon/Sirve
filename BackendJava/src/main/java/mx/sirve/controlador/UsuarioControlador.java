@@ -62,6 +62,7 @@ public class UsuarioControlador {
             @RequestAttribute(JwtServicio.ATRIBUTO_USUARIO) JwtServicio.DatosToken datos) {
         exigirAdmin(datos);
         servicio.actualizar(id,
+                (String) cuerpo.get("usuario"),
                 (String) cuerpo.getOrDefault("nombre", ""),
                 (String) cuerpo.get("rol"),
                 Boolean.TRUE.equals(cuerpo.get("activo")),

@@ -85,11 +85,21 @@ public class UsuarioRepositorio {
                 """, usuario, nombre, hash, rol, activo);
     }
 
-    public void actualizar(String id, String nombre, String rol, boolean activo) {
+    public void actualizar(String id, String usuario, String nombre, String rol, boolean activo) {
         jdbc.update("""
-                UPDATE sirve.usuario SET nombre = ?, rol = ?::sirve.rol_usuario, activo = ?
+                UPDATE sirve.usuario
+                   SET usuario = ?, nombre = ?, rol = ?::sirve.rol_usuario, activo = ?
                  WHERE id = ?::uuid
-                """, nombre, rol, activo, id);
+                """, usuario, nombre, rol, activo, id);
+    }
+
+    /** ¿Ese nombre de usuario ya lo tiene otra persona? */
+    public boolean usuarioOcupado(String usuario, String exceptoId) {
+        Integer n = jdbc.queryForObject("""
+                SELECT count(*) FROM sirve.usuario
+                 WHERE lower(usuario) = lower(?) AND id <> ?::uuid
+                """, Integer.class, usuario, exceptoId);
+        return n != null && n > 0;
     }
 
     /** Cambia la contraseña y cierra las sesiones abiertas de ese usuario. */

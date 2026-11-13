@@ -17,7 +17,7 @@ export const usuarioServicio = {
 
   actualizar: async (
     id: string,
-    datos: { nombre: string; rol: string; activo: boolean },
+    datos: { usuario: string; nombre: string; rol: string; activo: boolean },
   ): Promise<void> => {
     await cliente.put(`/usuarios/${id}`, datos)
   },

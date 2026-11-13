@@ -59,9 +59,18 @@ public class UsuarioServicio {
     }
 
     @Transactional
-    public void actualizar(String id, String nombre, String rol, boolean activo, String idSesion) {
-        usuarios.porId(id).orElseThrow(() ->
+    public void actualizar(String id, String usuario, String nombre, String rol,
+                           boolean activo, String idSesion) {
+        UsuarioDTO actual = usuarios.porId(id).orElseThrow(() ->
                 new NoEncontradoExcepcion("NO_ENCONTRADO", "Ese usuario no existe."));
+
+        if (usuario == null || usuario.isBlank()) {
+            throw new DatosInvalidosExcepcion("DATOS", "El usuario es obligatorio.");
+        }
+        String limpio = usuario.trim();
+        if (usuarios.usuarioOcupado(limpio, id)) {
+            throw new DatosInvalidosExcepcion("USUARIO_EXISTE", "Ese usuario ya lo tiene otra persona.");
+        }
 
         // Un administrador que se desactiva o se cambia el rol a sí mismo se
         // deja fuera y ya no puede volver a entrar a arreglarlo.
@@ -70,8 +79,13 @@ public class UsuarioServicio {
                     "No puedes quitarte el rol de administrador ni desactivarte a ti mismo.");
         }
 
-        usuarios.actualizar(id, nombre.trim(), validarRol(rol), activo);
-        if (!activo) usuarios.cerrarSesiones(id);
+        usuarios.actualizar(id, limpio, nombre.trim(), validarRol(rol), activo);
+
+        // Cambiar el usuario obliga a volver a entrar: su token lleva el nombre
+        // anterior y es lo que la persona escribe para identificarse.
+        if (!limpio.equalsIgnoreCase(actual.usuario()) || !activo) {
+            usuarios.cerrarSesiones(id);
+        }
     }
 
     /**

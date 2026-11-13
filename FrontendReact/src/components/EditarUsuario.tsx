@@ -21,6 +21,7 @@ export function EditarUsuario({
   alCerrar: () => void
   alTerminar: () => void
 }) {
+  const [nombreUsuario, setNombreUsuario] = useState(usuario.usuario)
   const [nombre, setNombre] = useState(usuario.nombre)
   const [rol, setRol] = useState(usuario.rol)
   const [error, setError] = useState<string | null>(null)
@@ -42,6 +43,7 @@ export function EditarUsuario({
     setGuardando(true)
     try {
       await usuarioServicio.actualizar(usuario.id, {
+        usuario: nombreUsuario.trim(),
         nombre: nombre.trim(),
         rol,
         activo: usuario.activo,
@@ -84,11 +86,21 @@ export function EditarUsuario({
         </div>
 
         <label className="mb-3 block text-xs text-texto-tenue">
+          Usuario
+          <input
+            value={nombreUsuario}
+            onChange={(e) => setNombreUsuario(e.target.value)}
+            autoComplete="off"
+            autoFocus
+            className={campo}
+          />
+        </label>
+
+        <label className="mb-3 block text-xs text-texto-tenue">
           Nombre completo
           <input
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
-            autoFocus
             className={campo}
           />
         </label>
@@ -105,7 +117,7 @@ export function EditarUsuario({
         </label>
 
         <p className="mb-3 text-xs text-texto-tenue">
-          El nombre de usuario no se cambia: es su identidad en el sistema.
+          Si cambias el usuario, esa persona tendrá que volver a entrar con el nuevo.
         </p>
 
         {error && (
@@ -124,7 +136,7 @@ export function EditarUsuario({
           </button>
           <button
             type="submit"
-            disabled={guardando || !nombre.trim()}
+            disabled={guardando || !nombre.trim() || !nombreUsuario.trim()}
             className="rounded-lg bg-primario px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
             {guardando ? 'Guardando…' : 'Guardar'}
