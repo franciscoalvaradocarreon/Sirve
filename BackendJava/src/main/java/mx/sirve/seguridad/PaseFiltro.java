@@ -26,7 +26,18 @@ import java.util.Optional;
 public class PaseFiltro extends OncePerRequestFilter {
 
     /** Rutas que exigen pase. */
-    private static final String[] PROTEGIDAS = {"/api/capturas", "/api/mis-casillas", "/api/sesion", "/api/actas"};
+    /**
+     * Rutas que el teléfono necesita para capturar.
+     *
+     * Los catálogos entran aquí desde que el escritorio tiene login: el
+     * teléfono arma su combo de elección y sus opciones de boleta con ellos, y
+     * no puede tener una sesión de escritorio. Se acepta el pase o una sesión
+     * válida, lo que venga.
+     */
+    private static final String[] PROTEGIDAS = {
+            "/api/capturas", "/api/mis-casillas", "/api/sesion", "/api/actas",
+            "/api/procesos", "/api/elecciones"
+    };
 
     /** Clave con la que el controlador recibe quién está capturando. */
     public static final String ATRIBUTO_CAPTURISTA = "idCapturista";
@@ -57,11 +68,16 @@ public class PaseFiltro extends OncePerRequestFilter {
         JwtServicio.DatosToken datos = jwt.leer(cabecera.substring(7).trim());
         if (datos == null) return false;
 
-        boolean captura = switch (datos.rol()) {
+        // Los catálogos son de solo lectura: cualquier rol con sesión puede
+        // consultarlos. Las rutas de captura, en cambio, solo los que capturan.
+        String ruta = peticion.getRequestURI();
+        boolean soloLectura = ruta.startsWith("/api/procesos") || ruta.startsWith("/api/elecciones");
+
+        boolean alcanza = soloLectura || switch (datos.rol()) {
             case "ADMIN", "COORDINADOR", "OPERADOR" -> true;
             default -> false;
         };
-        if (!captura) return false;
+        if (!alcanza) return false;
 
         // El token debe seguir vigente: si el usuario cerró sesión o cambió su
         // contraseña, el contador ya no coincide.
