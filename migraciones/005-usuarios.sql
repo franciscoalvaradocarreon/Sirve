@@ -128,16 +128,21 @@ SELECT r::sirve.rol_usuario, m.id
 ON CONFLICT DO NOTHING;
 
 -- --------------------------------------------------------------- permisos
+-- Cada rol se concede solo si existe: en una instalación limpia —la del CI, por
+-- ejemplo— los roles los crea el script de la base, y esta migración puede
+-- correr antes. Negarse a seguir por un rol ausente obligaría a inventarlo.
 DO $$
 BEGIN
-    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'sirve_app') THEN
-        GRANT SELECT, INSERT, UPDATE, DELETE ON sirve.usuario, sirve.menu, sirve.rol_menu
-            TO "User_app", sirve_app;
-        GRANT USAGE, SELECT ON SEQUENCE sirve.menu_id_seq TO "User_app", sirve_app;
-    ELSE
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'User_app') THEN
         GRANT SELECT, INSERT, UPDATE, DELETE ON sirve.usuario, sirve.menu, sirve.rol_menu
             TO "User_app";
         GRANT USAGE, SELECT ON SEQUENCE sirve.menu_id_seq TO "User_app";
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'sirve_app') THEN
+        GRANT SELECT, INSERT, UPDATE, DELETE ON sirve.usuario, sirve.menu, sirve.rol_menu
+            TO sirve_app;
+        GRANT USAGE, SELECT ON SEQUENCE sirve.menu_id_seq TO sirve_app;
     END IF;
 END $$;
 

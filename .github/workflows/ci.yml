@@ -236,6 +236,14 @@ jobs:
             psql -h 127.0.0.1 -U postgres -d SIRVE -v ON_ERROR_STOP=1 -q -f "$archivo"
           done
           # Usuarios y menús: la aplicación los consulta al arrancar.
+          # Los roles de la aplicación los crea db/99-rol-aplicacion.sh, que es
+          # un script de shell y no corre aquí; se crean a mano.
+          psql -h 127.0.0.1 -U postgres -d SIRVE -v ON_ERROR_STOP=1 -q \
+            -c "DO \$\$ BEGIN
+                  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'User_app') THEN
+                    CREATE ROLE \"User_app\" LOGIN PASSWORD 'prueba';
+                  END IF;
+                END \$\$;"
           psql -h 127.0.0.1 -U postgres -d SIRVE -v ON_ERROR_STOP=1 -q \
             -f migraciones/005-usuarios.sql
 
