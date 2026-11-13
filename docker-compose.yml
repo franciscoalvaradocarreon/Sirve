@@ -83,6 +83,9 @@ services:
       - actas:/datos/actas
     environment:
       ACTAS_RUTA: /datos/actas
+      # La etiqueta con la que se construyó esta imagen. La aplicación la
+      # devuelve en /api/version para saber qué corre sin entrar al servidor.
+      VERSION_APP: "${IMAGEN_APP:-local}"
       # El rol de la aplicación: lee y escribe datos, no altera el esquema.
       DB_URL:      "jdbc:postgresql://db:5432/${DB_NAME:-SIRVE}"
       DB_USER:     "${DB_APP_USER:-sirve_app}"

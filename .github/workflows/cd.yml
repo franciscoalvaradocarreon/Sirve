@@ -1,4 +1,7 @@
 name: Desplegar
+# El nombre de la corrida lleva la versión: sin esto la lista solo muestra
+# «Desplegar #26» y hay que abrir cada una para saber qué se publicó.
+run-name: Desplegar ${{ inputs.version }}
 
 # Manual, a propósito: el despliegue no se dispara solo al empujar código.
 # Se elige la versión y se ejecuta desde la pestaña Actions.

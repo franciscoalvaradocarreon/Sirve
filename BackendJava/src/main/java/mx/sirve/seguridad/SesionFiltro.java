@@ -33,6 +33,8 @@ public class SesionFiltro extends OncePerRequestFilter {
     /** Rutas que no exigen token de escritorio. */
     private static final List<String> ABIERTAS = List.of(
             "/api/auth/login",
+            // La versión se consulta desde fuera para saber qué se publicó.
+            "/api/version",
             // El teléfono se enrola con un código de un solo uso, no con una
             // sesión: es justo el paso en el que todavía no tiene credencial.
             "/api/dispositivos/enrolar",
