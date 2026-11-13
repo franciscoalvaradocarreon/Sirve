@@ -74,6 +74,12 @@ app:
   admin:
     clave: ${ADMIN_CLAVE:}
 
+  # Límite de peticiones por IP y por minuto. El general es amplio a propósito:
+  # varios capturistas pueden compartir la IP de salida de una operadora.
+  limite:
+    general: ${LIMITE_GENERAL:300}
+    credenciales: ${LIMITE_CREDENCIALES:20}
+
 management:
   endpoints:
     web:
