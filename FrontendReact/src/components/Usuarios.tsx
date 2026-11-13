@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { KeyRound, Plus, Trash2, UserRound } from 'lucide-react'
+import { KeyRound, Pencil, Plus, Trash2, UserRound } from 'lucide-react'
 import { CambiarClave } from './CambiarClave'
+import { EditarUsuario } from './EditarUsuario'
 import { usuarioServicio } from '../api/usuarioServicio'
 import { useSesion } from '../context/SesionContext'
 import type { UsuarioSesion } from '../types'
@@ -23,6 +24,7 @@ export function Usuarios() {
   const [error, setError] = useState<string | null>(null)
   /** Usuario al que se le está asignando una contraseña nueva. */
   const [cambiando, setCambiando] = useState<UsuarioSesion | null>(null)
+  const [editando, setEditando] = useState<UsuarioSesion | null>(null)
 
   const [creando, setCreando] = useState(false)
   const [nuevoUsuario, setNuevoUsuario] = useState('')
@@ -239,6 +241,13 @@ export function Usuarios() {
                 </td>
                 <td className="px-4 py-3 text-right">
                   <button
+                    onClick={() => setEditando(u)}
+                    className="rounded p-1.5 text-texto-tenue hover:text-primario"
+                    title="Editar nombre y rol"
+                  >
+                    <Pencil size={15} />
+                  </button>
+                  <button
                     onClick={() => setCambiando(u)}
                     className="rounded p-1.5 text-texto-tenue hover:text-primario"
                     title="Cambiar contraseña"
@@ -258,6 +267,14 @@ export function Usuarios() {
           </tbody>
         </table>
       </div>
+
+      {editando && (
+        <EditarUsuario
+          usuario={editando}
+          alCerrar={() => setEditando(null)}
+          alTerminar={recargar}
+        />
+      )}
 
       {cambiando && (
         <CambiarClave
