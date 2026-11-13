@@ -119,7 +119,7 @@ jobs:
           # Se consulta /liveness y no /health a propósito: /health incluye la
           # verificación de la base y aquí no hay base, así que responde 503 y
           # haría fallar la prueba por algo que no se está probando.
-          nohup java -jar target/sirve.jar --server.port=8099 > /tmp/app.log 2>&1 &
+          nohup java -jar target/sirve.jar --app.usuarios.inicializar=false --server.port=8099 > /tmp/app.log 2>&1 &
           for i in $(seq 1 40); do
             if curl -fsS http://127.0.0.1:8099/actuator/health/liveness > /dev/null 2>&1; then
               echo "La aplicación arrancó y responde."
@@ -254,6 +254,7 @@ jobs:
             -e DB_USER=postgres \
             -e DB_PASSWORD=prueba \
             -e JWT_CLAVE=clave-de-prueba-en-integracion-continua-32 \
+            -e PUERTO=8098 \
             sirve-p:ci
           for i in $(seq 1 40); do
             if curl -fsS http://127.0.0.1:8098/actuator/health/liveness > /dev/null 2>&1; then

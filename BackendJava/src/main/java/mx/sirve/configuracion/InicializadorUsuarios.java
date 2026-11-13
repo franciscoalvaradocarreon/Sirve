@@ -29,7 +29,16 @@ public class InicializadorUsuarios {
     private static final Logger log = LoggerFactory.getLogger(InicializadorUsuarios.class);
     private static final String ALFABETO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
+    /**
+     * Se puede desactivar con app.usuarios.inicializar=false.
+     *
+     * Lo usa la prueba del jar en integración continua, donde no hay base de
+     * datos y lo único que se comprueba es que el artefacto arranque. En
+     * producción siempre está activo.
+     */
     @Bean
+    @org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
+            name = "app.usuarios.inicializar", havingValue = "true", matchIfMissing = true)
     public ApplicationRunner crearPrimerAdmin(UsuarioRepositorio usuarios,
                                               AutenticacionServicio autenticacion,
                                               @Value("${app.admin.clave:}") String claveDeEntorno) {
