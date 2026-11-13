@@ -49,7 +49,18 @@ export class ErrorApi extends Error {
  * teléfono—, y colar el token en una ruta del móvil hacía que el servidor la
  * rechazara y, peor, que se cerrara la sesión del escritorio.
  */
-const RUTAS_DEL_MOVIL = [
+/**
+ * Rutas que SOLO entienden el pase del teléfono.
+ *
+ * En ellas nunca se manda el token de escritorio: el navegador de la misma
+ * máquina puede tener las dos credenciales, y colar el token ahí hacía que el
+ * servidor rechazara la petición y cerrara la sesión web.
+ *
+ * Ojo: son las que no deben llevar token, no las únicas que llevan pase. Los
+ * catálogos —/procesos, /elecciones— los usa el teléfono con su pase y el
+ * escritorio con su token, así que se manda el que haya.
+ */
+const RUTAS_SOLO_MOVIL = [
   '/capturas',
   '/mis-casillas',
   '/sesion',
@@ -57,19 +68,23 @@ const RUTAS_DEL_MOVIL = [
   '/dispositivos',
 ]
 
-const esRutaDelMovil = (url: string | undefined) =>
-  !!url && RUTAS_DEL_MOVIL.some((r) => url === r || url.startsWith(r + '/') || url.startsWith(r + '?'))
+const esRutaSoloMovil = (url: string | undefined) =>
+  !!url && RUTAS_SOLO_MOVIL.some((r) => url === r || url.startsWith(r + '/') || url.startsWith(r + '?'))
 
 cliente.interceptors.request.use((configuracion) => {
-  if (esRutaDelMovil(configuracion.url)) {
-    const pase = leerPase()
-    if (pase) configuracion.headers.Authorization = `Bearer ${pase}`
+  // El pase manda cuando existe: si este navegador es el teléfono, todas sus
+  // peticiones van con él, incluidos los catálogos.
+  const pase = leerPase()
+  if (pase) {
+    configuracion.headers.Authorization = `Bearer ${pase}`
     return configuracion
   }
 
-  const token = leerToken()
-  if (token) {
-    configuracion.headers.Authorization = `Bearer ${token}`
+  // Sin pase, se usa la sesión del escritorio, salvo en las rutas que solo
+  // entienden el pase.
+  if (!esRutaSoloMovil(configuracion.url)) {
+    const token = leerToken()
+    if (token) configuracion.headers.Authorization = `Bearer ${token}`
   }
   return configuracion
 })
@@ -104,7 +119,7 @@ cliente.interceptors.response.use(
      * miraba el pase guardado, y un fallo del móvil cerraba la sesión web.
      */
     if (estado === 401 && cuerpo?.codigo === 'NO_AUTENTICADO') {
-      if (esRutaDelMovil(error.config?.url)) {
+      if (esRutaSoloMovil(error.config?.url)) {
         borrarSesion()
         window.dispatchEvent(new Event(EVENTO_SESION_EXPIRADA))
       } else {
