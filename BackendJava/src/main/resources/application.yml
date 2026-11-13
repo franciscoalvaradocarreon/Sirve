@@ -74,10 +74,12 @@ app:
   admin:
     clave: ${ADMIN_CLAVE:}
 
-  # Límite de peticiones por IP y por minuto. El general es amplio a propósito:
-  # varios capturistas pueden compartir la IP de salida de una operadora.
+  # Límites por minuto. El de credencial es alto a propósito: las operadoras
+  # móviles usan CGNAT y cientos de teléfonos comparten una IP pública, así que
+  # el tráfico autenticado se cuenta por credencial y no por dirección.
   limite:
-    general: ${LIMITE_GENERAL:300}
+    credencial: ${LIMITE_CREDENCIAL:600}
+    anonima: ${LIMITE_ANONIMA:300}
     credenciales: ${LIMITE_CREDENCIALES:20}
 
 management:
