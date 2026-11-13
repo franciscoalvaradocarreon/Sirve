@@ -10,11 +10,10 @@ import { leerToken } from '../utils/sesionEscritorio'
  * producción el front va dentro del jar y comparte origen, así que la misma
  * base sirve en los dos entornos.
  *
- * El interceptor de petición pega el pase del teléfono, si lo hay. Va aquí y
- * no en cada pantalla para que ninguna llamada se quede sin él por descuido.
- *
- * El de respuesta convierte el error del contrato en un Error normal con
- * codigo y estado, para que las pantallas no tengan que conocer axios.
+ * Aquí conviven dos credenciales: el pase del teléfono y el token del
+ * escritorio. El interceptor decide cuál mandar y el de respuesta interpreta
+ * los 401 según la pantalla —no según la ruta— para que un fallo del teléfono
+ * no cierre la sesión del escritorio.
  */
 export const cliente = axios.create({
   baseURL: '/api',
@@ -34,58 +33,32 @@ export class ErrorApi extends Error {
   }
 }
 
-/*
- * Dos credenciales conviven en el mismo cliente.
- *
- * El teléfono manda su pase; el escritorio, el token de su sesión. Se elige
- * el pase primero porque las rutas del móvil solo entienden ese, y porque un
- * navegador de escritorio nunca lo tiene guardado.
- */
-/*
- * Rutas que solo entienden el pase del teléfono.
- *
- * Ahí NO se manda el token del escritorio, aunque lo haya: el navegador de la
- * misma máquina puede tener las dos cosas —la sesión web y la app del
- * teléfono—, y colar el token en una ruta del móvil hacía que el servidor la
- * rechazara y, peor, que se cerrara la sesión del escritorio.
- */
 /**
- * Rutas que SOLO entienden el pase del teléfono.
+ * ¿Estamos en la pantalla del teléfono?
  *
- * En ellas nunca se manda el token de escritorio: el navegador de la misma
- * máquina puede tener las dos credenciales, y colar el token ahí hacía que el
- * servidor rechazara la petición y cerrara la sesión web.
+ * Es la pregunta que decide qué credencial se manda.
  *
- * Ojo: son las que no deben llevar token, no las únicas que llevan pase. Los
- * catálogos —/procesos, /elecciones— los usa el teléfono con su pase y el
- * escritorio con su token, así que se manda el que haya.
+ * En el mismo navegador pueden convivir las dos: alguien abre /movil para
+ * probar y luego entra al escritorio, y quedan guardados el pase del teléfono
+ * y el token de la sesión. Antes se elegía por la ruta del API, y eso fallaba:
+ * con un pase guardado, las peticiones del escritorio salían con el pase, el
+ * servidor las rechazaba y la sesión se cerraba sola al instante.
+ *
+ * Se mira la pantalla, no la ruta: en /movil manda el pase; en el resto, el
+ * token.
  */
-const RUTAS_SOLO_MOVIL = [
-  '/capturas',
-  '/mis-casillas',
-  '/sesion',
-  '/actas',
-  '/dispositivos',
-]
-
-const esRutaSoloMovil = (url: string | undefined) =>
-  !!url && RUTAS_SOLO_MOVIL.some((r) => url === r || url.startsWith(r + '/') || url.startsWith(r + '?'))
+const enPantallaDelMovil = () =>
+  typeof window !== 'undefined' && window.location.pathname.startsWith('/movil')
 
 cliente.interceptors.request.use((configuracion) => {
-  // El pase manda cuando existe: si este navegador es el teléfono, todas sus
-  // peticiones van con él, incluidos los catálogos.
-  const pase = leerPase()
-  if (pase) {
-    configuracion.headers.Authorization = `Bearer ${pase}`
+  if (enPantallaDelMovil()) {
+    const pase = leerPase()
+    if (pase) configuracion.headers.Authorization = `Bearer ${pase}`
     return configuracion
   }
 
-  // Sin pase, se usa la sesión del escritorio, salvo en las rutas que solo
-  // entienden el pase.
-  if (!esRutaSoloMovil(configuracion.url)) {
-    const token = leerToken()
-    if (token) configuracion.headers.Authorization = `Bearer ${token}`
-  }
+  const token = leerToken()
+  if (token) configuracion.headers.Authorization = `Bearer ${token}`
   return configuracion
 })
 
@@ -93,7 +66,7 @@ cliente.interceptors.request.use((configuracion) => {
 export const EVENTO_SESION_ESCRITORIO = 'sirve:sesion-escritorio-vencida'
 
 /**
- * Aviso de que el pase dejó de servir.
+ * Aviso de que el pase del teléfono dejó de servir.
  *
  * La pantalla lo escucha y vuelve al enrolamiento. Se usa un evento y no una
  * redirección directa para no meter el enrutador dentro del cliente HTTP.
@@ -107,19 +80,13 @@ cliente.interceptors.response.use(
     const cuerpo = error.response?.data?.error
 
     /*
-     * 401 significa que el pase ya no vale: el teléfono se dio de baja, se
-     * reemitió el código o alguien desactivó el aparato. Sin esto la
-     * aplicación seguía mostrando la captura con datos guardados y los envíos
-     * fallaban en silencio.
-     */
-    /*
-     * Un 401 se interpreta según la ruta que falló, no según lo que haya
-     * guardado: si falló una ruta del teléfono, se cierra la sesión del
-     * teléfono; si falló una del escritorio, la del escritorio. Antes se
-     * miraba el pase guardado, y un fallo del móvil cerraba la sesión web.
+     * Un 401 significa que la credencial dejó de valer. Qué sesión se cierra
+     * depende de la pantalla en la que esté el usuario: en el teléfono, la del
+     * teléfono —el aparato se dio de baja o se reemitió el código—; en el
+     * escritorio, la del escritorio.
      */
     if (estado === 401 && cuerpo?.codigo === 'NO_AUTENTICADO') {
-      if (esRutaSoloMovil(error.config?.url)) {
+      if (enPantallaDelMovil()) {
         borrarSesion()
         window.dispatchEvent(new Event(EVENTO_SESION_EXPIRADA))
       } else {
