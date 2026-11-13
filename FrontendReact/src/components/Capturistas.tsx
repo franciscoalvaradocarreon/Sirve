@@ -201,14 +201,19 @@ export function Capturistas() {
                     <span className="flex min-w-0 items-center gap-2 text-texto">
                       <Smartphone size={14} className="shrink-0 text-texto-tenue" />
                       <span className="truncate">{t.nombre ?? 'Teléfono'}</span>
+                      {/* Tres estados, no dos: un teléfono dado de baja conserva
+                          su pase y sin mirar «activo» seguía pareciendo
+                          enrolado después de desactivarlo. */}
                       <span
                         className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${
-                          t.enrolado
-                            ? 'bg-primario/10 text-primario'
-                            : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                          !t.activo
+                            ? 'bg-fondo-alt text-texto-tenue'
+                            : t.enrolado
+                              ? 'bg-primario/10 text-primario'
+                              : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
                         }`}
                       >
-                        {t.enrolado ? 'enrolado' : 'sin enrolar'}
+                        {!t.activo ? 'desactivado' : t.enrolado ? 'enrolado' : 'sin enrolar'}
                       </span>
                     </span>
                     <span className="flex shrink-0 items-center gap-1">
@@ -219,13 +224,15 @@ export function Capturistas() {
                       >
                         <KeyRound size={14} />
                       </button>
-                      <button
-                        onClick={() => void desactivar(t.id)}
-                        className="rounded p-1.5 text-texto-tenue hover:text-red-600"
-                        title="Desactivar"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      {t.activo && (
+                        <button
+                          onClick={() => void desactivar(t.id)}
+                          className="rounded p-1.5 text-texto-tenue hover:text-red-600"
+                          title="Desactivar"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
                     </span>
                   </li>
                 ))}
