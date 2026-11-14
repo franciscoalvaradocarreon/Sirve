@@ -76,7 +76,7 @@ app:
 
   # Horas que vale un código de enrolamiento antes de caducar.
   enrolamiento:
-    horas: ${ENROLAMIENTO_HORAS:24}
+    horas: ${ENROLAMIENTO_HORAS:3}
 
   # Límites por minuto. El de credencial es alto a propósito: las operadoras
   # móviles usan CGNAT y cientos de teléfonos comparten una IP pública, así que
