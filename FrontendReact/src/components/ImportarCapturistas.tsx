@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, FileUp, TriangleAlert, Upload } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Download, FileUp, TriangleAlert, Upload } from 'lucide-react'
 import { cliente } from '../api/cliente'
 
 /** Una fila leída del archivo, ya normalizada. */
@@ -92,6 +92,35 @@ export function ImportarCapturistas() {
     setError(null)
     setResultado(null)
     setFilas(leidas)
+  }
+
+  /**
+   * Descarga un archivo de ejemplo.
+   *
+   * Lleva el encabezado y dos renglones: uno completo y otro sin teléfono, para
+   * que se vea que ese campo es opcional. Las secciones son reales de 2027.
+   *
+   * Se antepone el carácter BOM porque Excel, sin él, abre el archivo en ANSI
+   * y rompe los acentos: «MARÍA» aparece como «MARÃA».
+   */
+  function descargarEjemplo() {
+    const encabezado = [
+      'Nombre', 'telefono',
+      ...Array.from({ length: 10 }, (_, i) => `seccion${i + 1}`),
+    ].join(',')
+
+    const fila1 = ['Maria Garza Arriaga', '8121234567', '1061', '1062', '1063', '1064',
+                   '1065', '1066', '1067', '1068', '1069', '1070'].join(',')
+
+    const fila2 = ['Jose Luis Ramirez', '', '1071', '1072', '1073', '1074', '',
+                   '', '', '', '', ''].join(',')
+
+    const contenido = '\uFEFF' + [encabezado, fila1, fila2].join('\r\n') + '\r\n'
+    const enlace = document.createElement('a')
+    enlace.href = URL.createObjectURL(new Blob([contenido], { type: 'text/csv;charset=utf-8' }))
+    enlace.download = 'capturistas-ejemplo.csv'
+    enlace.click()
+    URL.revokeObjectURL(enlace.href)
   }
 
   /** Parte una línea respetando las comillas dobles. */
@@ -209,6 +238,21 @@ export function ImportarCapturistas() {
           <p className="mt-1 text-xs text-texto-tenue">
             Columnas: Nombre, telefono, seccion1, seccion2… · guardado en UTF-8
           </p>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              // El recuadro entero abre el selector de archivo; este botón no
+              // debe dispararlo también.
+              e.preventDefault()
+              e.stopPropagation()
+              descargarEjemplo()
+            }}
+            className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-borde px-3 py-1.5 text-xs text-texto-tenue hover:text-primario"
+          >
+            <Download size={13} />
+            Descargar ejemplo
+          </button>
           <input
             type="file"
             accept=".csv,text/csv"
