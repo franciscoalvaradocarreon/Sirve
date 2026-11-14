@@ -2,7 +2,7 @@ package mx.sirve.controlador;
 
 import mx.sirve.repositorio.AvanceOperacionRepositorio;
 import mx.sirve.servicio.EleccionServicio;
-import org.springframework.beans.factory.annotation.Value;
+import mx.sirve.servicio.ParametrosServicio;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,12 +32,13 @@ public class SalaControlador {
     private final AvanceOperacionRepositorio consultas;
     private final EleccionServicio elecciones;
 
-    @Value("${app.sala.habilitada:false}")
-    private boolean habilitada;
+    private final ParametrosServicio parametros;
 
-    public SalaControlador(AvanceOperacionRepositorio consultas, EleccionServicio elecciones) {
+    public SalaControlador(AvanceOperacionRepositorio consultas, EleccionServicio elecciones,
+                           ParametrosServicio parametros) {
         this.consultas = consultas;
         this.elecciones = elecciones;
+        this.parametros = parametros;
     }
 
     /**
@@ -49,7 +50,7 @@ public class SalaControlador {
      */
     @GetMapping("/elecciones")
     public ResponseEntity<List<Map<String, Object>>> elecciones() {
-        if (!habilitada) return ResponseEntity.ok(List.of());
+        if (!parametros.salaHabilitada()) return ResponseEntity.ok(List.of());
         return ResponseEntity.ok(consultas.eleccionesPublicables());
     }
 
@@ -58,10 +59,13 @@ public class SalaControlador {
             @RequestParam(name = "id_eleccion") int idEleccion) {
 
         Map<String, Object> respuesta = new LinkedHashMap<>();
-        respuesta.put("habilitada", habilitada);
+        respuesta.put("habilitada", parametros.salaHabilitada());
         respuesta.put("servidor", OffsetDateTime.now());
 
-        if (!habilitada) return ResponseEntity.ok(respuesta);
+        if (!parametros.salaHabilitada()) {
+            respuesta.put("mensaje", parametros.salaMensaje());
+            return ResponseEntity.ok(respuesta);
+        }
 
         elecciones.exigirQueExista(idEleccion);
 

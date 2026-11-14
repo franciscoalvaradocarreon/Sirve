@@ -26,6 +26,7 @@ import { UsuariosMenus } from './components/UsuariosMenus'
 import { ImportarCapturistas } from './components/ImportarCapturistas'
 import { Sala } from './components/Sala'
 import { Operacion } from './components/Operacion'
+import { Parametros } from './components/Parametros'
 
 /** Deja pasar solo con sesión iniciada; si no, manda al login. */
 function RutaPrivada({ children }: { children: React.ReactNode }) {
@@ -64,6 +65,7 @@ export default function App() {
             <Route path="/capturistas/:id" element={<CapturistaFormulario />} />
             <Route path="/usuarios" element={<Usuarios />} />
             <Route path="/usuarios/menus" element={<UsuariosMenus />} />
+            <Route path="/parametros" element={<Parametros />} />
           </Route>
 
           {/* Teléfono y tableta: árbol propio, sin menú lateral, con

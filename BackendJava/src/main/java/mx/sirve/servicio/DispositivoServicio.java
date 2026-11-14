@@ -25,9 +25,8 @@ import java.util.Optional;
 @Transactional
 public class DispositivoServicio {
 
-    /** Horas que vale un código de enrolamiento. */
-    @org.springframework.beans.factory.annotation.Value("${app.enrolamiento.horas:24}")
-    private int horasCodigo;
+    /** De dónde salen los parámetros ajustables. */
+    private final mx.sirve.servicio.ParametrosServicio parametros;
 
     private final DispositivoRepositorio dispositivos;
     private final CapturistaRepositorio capturistas;
@@ -35,10 +34,12 @@ public class DispositivoServicio {
 
     public DispositivoServicio(DispositivoRepositorio dispositivos,
                                CapturistaRepositorio capturistas,
-                               EleccionServicio eleccionServicio) {
+                               EleccionServicio eleccionServicio,
+                               ParametrosServicio parametros) {
         this.dispositivos = dispositivos;
         this.capturistas = capturistas;
         this.eleccionServicio = eleccionServicio;
+        this.parametros = parametros;
     }
 
     /** Máximo de teléfonos activos por capturista. */
@@ -61,11 +62,12 @@ public class DispositivoServicio {
         Optional<Integer> pendiente = dispositivos.sinEnrolar(idCapturista);
         if (pendiente.isPresent()) {
             int id = pendiente.get();
-            dispositivos.reemitir(id, Pases.hash(codigo), horasCodigo);
+            dispositivos.reemitir(id, Pases.hash(codigo), parametros.horasEnrolamiento());
             // Los que quedaron de pruebas anteriores no sirven para nada.
             dispositivos.depurarSinEnrolar(idCapturista, id);
             return new CodigoEnrolamientoDTO(id, codigo, nombre, 
-                java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC).plusHours(horasCodigo));
+                java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC)
+                        .plusHours(parametros.horasEnrolamiento()));
         }
 
         /*
@@ -73,17 +75,20 @@ public class DispositivoServicio {
          * normal, y un código que nadie usó no es un teléfono en operación.
          * El tope se aplica al enrolar.
          */
-        int id = dispositivos.crear(idCapturista, nombre, Pases.hash(codigo), horasCodigo);
+        int id = dispositivos.crear(idCapturista, nombre, Pases.hash(codigo),
+                parametros.horasEnrolamiento());
         return new CodigoEnrolamientoDTO(id, codigo, nombre, 
-                java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC).plusHours(horasCodigo));
+                java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC)
+                        .plusHours(parametros.horasEnrolamiento()));
     }
 
     /** Reemite el código de un dispositivo: sirve para cambiar de teléfono. */
     public CodigoEnrolamientoDTO reemitir(int idDispositivo) {
         String codigo = Pases.nuevoCodigo();
-        dispositivos.reemitir(idDispositivo, Pases.hash(codigo), horasCodigo);
+        dispositivos.reemitir(idDispositivo, Pases.hash(codigo), parametros.horasEnrolamiento());
         return new CodigoEnrolamientoDTO(idDispositivo, codigo, null, 
-                java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC).plusHours(horasCodigo));
+                java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC)
+                        .plusHours(parametros.horasEnrolamiento()));
     }
 
     /**
