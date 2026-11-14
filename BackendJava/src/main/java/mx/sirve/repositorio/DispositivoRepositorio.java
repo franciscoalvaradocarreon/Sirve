@@ -35,7 +35,7 @@ public class DispositivoRepositorio {
     public int crear(int idCapturista, String nombre, String codigoHash, int horas) {
         Integer id = jdbc.queryForObject("""
                 INSERT INTO sirve.dispositivo (id_capturista, nombre, codigo_hash, codigo_expira)
-                VALUES (?, ?, ?, now() + (? || ' hours')::interval)
+                VALUES (?, ?, ?, now() + make_interval(hours => ?))
                 RETURNING id
                 """, Integer.class, idCapturista, nombre, codigoHash, horas);
         return id == null ? 0 : id;
@@ -121,7 +121,8 @@ public class DispositivoRepositorio {
                  WHERE codigo_hash = ? AND activo AND pase_hash IS NULL
                 """, (rs, n) -> new Object[]{
                     rs.getInt("id"), rs.getInt("id_capturista"),
-                    rs.getObject("codigo_expira", java.time.OffsetDateTime.class)});
+                    rs.getObject("codigo_expira", java.time.OffsetDateTime.class)},
+                codigoHash);
         return filas.stream().findFirst();
     }
 
