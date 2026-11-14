@@ -22,6 +22,7 @@ import { TemaProveedor } from './context/TemaContext'
 import { SesionProveedor, useSesion } from './context/SesionContext'
 import { Login } from './components/Login'
 import { Usuarios } from './components/Usuarios'
+import { UsuariosMenus } from './components/UsuariosMenus'
 import { ImportarCapturistas } from './components/ImportarCapturistas'
 
 /** Deja pasar solo con sesión iniciada; si no, manda al login. */
@@ -56,6 +57,7 @@ export default function App() {
             <Route path="/capturistas/importar" element={<ImportarCapturistas />} />
             <Route path="/capturistas/:id" element={<CapturistaFormulario />} />
             <Route path="/usuarios" element={<Usuarios />} />
+            <Route path="/usuarios/menus" element={<UsuariosMenus />} />
           </Route>
 
           {/* Teléfono y tableta: árbol propio, sin menú lateral, con

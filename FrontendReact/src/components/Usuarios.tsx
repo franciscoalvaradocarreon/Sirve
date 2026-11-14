@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { KeyRound, Pencil, Plus, Trash2, UserRound } from 'lucide-react'
+import { KeyRound, Pencil, Plus, SlidersHorizontal, Trash2, UserRound } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { CambiarClave } from './CambiarClave'
 import { EditarUsuario } from './EditarUsuario'
 import { usuarioServicio } from '../api/usuarioServicio'
@@ -106,13 +107,22 @@ export function Usuarios() {
             Quién entra al escritorio y qué puede ver. El teléfono no usa esto.
           </p>
         </div>
-        <button
-          onClick={() => setCreando((v) => !v)}
-          className="flex items-center gap-2 rounded-lg bg-primario px-3 py-2 text-sm font-medium text-white"
-        >
-          <Plus size={16} />
-          Nuevo usuario
-        </button>
+        <span className="flex flex-wrap gap-2">
+          <Link
+            to="/usuarios/menus"
+            className="flex items-center gap-2 rounded-lg border border-borde px-3 py-2 text-sm text-texto-tenue hover:text-primario"
+          >
+            <SlidersHorizontal size={16} />
+            Menús por rol
+          </Link>
+          <button
+            onClick={() => setCreando((v) => !v)}
+            className="flex items-center gap-2 rounded-lg bg-primario px-3 py-2 text-sm font-medium text-white"
+          >
+            <Plus size={16} />
+            Nuevo usuario
+          </button>
+        </span>
       </header>
 
       {error && (

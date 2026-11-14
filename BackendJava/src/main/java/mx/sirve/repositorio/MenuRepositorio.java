@@ -71,4 +71,64 @@ public class MenuRepositorio {
                   FROM sirve.menu m ORDER BY m.orden
                 """);
     }
+
+    /* ------------------------------------------------------------------
+     * Administración de menús por rol
+     * ------------------------------------------------------------------ */
+
+    /** Todos los menús, en orden, con su nivel y su padre. */
+    public List<Map<String, Object>> catalogo() {
+        return jdbc.queryForList("""
+                SELECT m.id, m.clave, m.etiqueta, m.ruta, m.icono, m.id_padre, m.orden
+                  FROM sirve.menu m
+                 WHERE m.activo
+                 ORDER BY m.orden
+                """);
+    }
+
+    /** Qué menús tiene concedidos cada rol. */
+    public Map<String, java.util.Set<Integer>> porRol() {
+        Map<String, java.util.Set<Integer>> mapa = new java.util.LinkedHashMap<>();
+        jdbc.query("SELECT rol::text AS rol, id_menu FROM sirve.rol_menu", rs -> {
+            mapa.computeIfAbsent(rs.getString("rol"), k -> new java.util.LinkedHashSet<>())
+                    .add(rs.getInt("id_menu"));
+        });
+        return mapa;
+    }
+
+    /**
+     * Reemplaza los menús de un rol.
+     *
+     * Se borra y se vuelve a escribir en la misma transacción: es más simple
+     * que calcular altas y bajas, y con veinte menús el costo es nulo.
+     */
+    public void guardarRol(String rol, List<Integer> ids) {
+        jdbc.update("DELETE FROM sirve.rol_menu WHERE rol = ?::sirve.rol_usuario", rol);
+        for (Integer id : ids) {
+            jdbc.update("""
+                    INSERT INTO sirve.rol_menu (rol, id_menu)
+                    VALUES (?::sirve.rol_usuario, ?) ON CONFLICT DO NOTHING
+                    """, rol, id);
+        }
+    }
+
+    /** Los roles que existen en el enum, con su nombre legible. */
+    public List<Map<String, Object>> roles() {
+        return jdbc.queryForList("""
+                SELECT e.enumlabel AS clave,
+                       CASE e.enumlabel
+                         WHEN 'ADMIN' THEN 'Administrador'
+                         WHEN 'COORDINADOR' THEN 'Supervisor'
+                         WHEN 'OPERADOR' THEN 'Capturista'
+                         WHEN 'ANALISTA' THEN 'Analista'
+                         WHEN 'AUDITOR' THEN 'Auditor'
+                         ELSE e.enumlabel
+                       END AS nombre
+                  FROM pg_enum e
+                  JOIN pg_type t ON t.oid = e.enumtypid
+                  JOIN pg_namespace n ON n.oid = t.typnamespace
+                 WHERE n.nspname = 'sirve' AND t.typname = 'rol_usuario'
+                 ORDER BY e.enumsortorder
+                """);
+    }
 }
