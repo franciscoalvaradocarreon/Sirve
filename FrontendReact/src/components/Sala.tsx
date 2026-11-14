@@ -48,11 +48,32 @@ const REFRESCO_MS = 30_000
  * que se publica se decide en el servidor, no aquí.
  */
 export function Sala() {
-  const [parametros] = useSearchParams()
+  const [parametros, setParametros] = useSearchParams()
   const [datos, setDatos] = useState<Sala | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [elecciones, setElecciones] = useState<{ id: number; nombre: string }[]>([])
 
   const idEleccion = Number(parametros.get('id_eleccion')) || null
+
+  /*
+   * Las elecciones se piden a un endpoint público: el normal exige sesión y en
+   * la sala no hay nadie que entre. Si no viene ninguna en la dirección, se
+   * elige la primera para que la pantalla nunca quede vacía por descuido.
+   */
+  useEffect(() => {
+    cliente
+      .get<{ id: number; nombre: string }[]>('/publico/sala/elecciones')
+      .then((r) => {
+        setElecciones(r.data)
+        if (!idEleccion && r.data.length > 0) {
+          setParametros({ id_eleccion: String(r.data[0].id) }, { replace: true })
+        }
+      })
+      .catch(() => {
+        // Sin lista no se puede elegir, pero la sala sigue funcionando.
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     let vigente = true
@@ -123,8 +144,26 @@ export function Sala() {
     <div className="min-h-screen bg-fondo px-6 py-6">
       <div className="mx-auto max-w-6xl">
         {/* Encabezado */}
-        <header className="mb-6 flex flex-wrap items-baseline justify-between gap-2 border-b border-borde pb-3">
-          <h1 className="text-3xl font-semibold text-texto">{datos.eleccion}</h1>
+        <header className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-borde pb-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-3xl font-semibold text-texto">{datos.eleccion}</h1>
+            {elecciones.length > 1 && (
+              <select
+                value={idEleccion ?? ''}
+                onChange={(e) =>
+                  setParametros({ id_eleccion: e.target.value }, { replace: true })
+                }
+                className="rounded-lg border border-borde bg-superficie px-3 py-1.5 text-sm text-texto"
+                title="Cambiar de elección"
+              >
+                {elecciones.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.nombre}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
           <p className="flex items-center gap-1.5 text-sm text-texto-tenue">
             <Clock size={14} />
             última acta {hora(datos.ultima)}

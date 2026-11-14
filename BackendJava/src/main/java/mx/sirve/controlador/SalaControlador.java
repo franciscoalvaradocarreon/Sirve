@@ -40,6 +40,19 @@ public class SalaControlador {
         this.elecciones = elecciones;
     }
 
+    /**
+     * Elecciones que la sala puede mostrar.
+     *
+     * El combo de la pantalla pública no puede usar /api/elecciones: esa ruta
+     * exige credencial, y en la sala no hay nadie que inicie sesión. Aquí solo
+     * salen identificador y nombre, del proceso activo.
+     */
+    @GetMapping("/elecciones")
+    public ResponseEntity<List<Map<String, Object>>> elecciones() {
+        if (!habilitada) return ResponseEntity.ok(List.of());
+        return ResponseEntity.ok(consultas.eleccionesPublicables());
+    }
+
     @GetMapping
     public ResponseEntity<Map<String, Object>> sala(
             @RequestParam(name = "id_eleccion") int idEleccion) {

@@ -27,6 +27,17 @@ public class AvanceOperacionRepositorio {
         this.jdbc = jdbc;
     }
 
+    /** Elecciones del proceso activo, solo id y nombre: es lo único público. */
+    public List<Map<String, Object>> eleccionesPublicables() {
+        return jdbc.queryForList("""
+                SELECT e.id, e.nombre
+                  FROM sirve.eleccion e
+                  JOIN sirve.proceso_electoral p ON p.id = e.id_proceso
+                 WHERE p.activo
+                 ORDER BY e.id
+                """);
+    }
+
     /** Nombre de la elección, para rotular la pantalla. */
     public String nombreEleccion(int idEleccion) {
         return jdbc.queryForObject(

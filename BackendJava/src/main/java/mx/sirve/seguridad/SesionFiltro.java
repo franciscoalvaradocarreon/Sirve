@@ -47,7 +47,8 @@ public class SesionFiltro extends OncePerRequestFilter {
             "/api/procesos",
             "/api/elecciones",
             // La sala de resultados va en una pantalla pública, sin sesión.
-            "/api/publico/sala"
+            "/api/publico/sala",
+            "/api/publico/sala/elecciones"
     );
 
     /**
