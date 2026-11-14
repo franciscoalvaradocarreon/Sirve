@@ -228,42 +228,43 @@ export function ImportarCapturistas() {
         </div>
       )}
 
-      {/* Selección de archivo */}
+      {/* Selección de archivo.
+          El botón del ejemplo va FUERA del recuadro: un <label> reenvía el
+          clic a su primer control etiquetable, y con el botón dentro era el
+          botón el que se activaba al pulsar cualquier parte del recuadro. */}
       {!filas && (
-        <label className="block cursor-pointer rounded-xl border border-dashed border-borde bg-superficie p-10 text-center">
-          <FileUp size={26} className="mx-auto mb-2 text-texto-tenue" />
-          <p className="text-sm font-medium text-texto">
-            {nombreArchivo || 'Elige el archivo CSV'}
-          </p>
-          <p className="mt-1 text-xs text-texto-tenue">
-            Columnas: Nombre, telefono, seccion1, seccion2… · guardado en UTF-8
-          </p>
+        <div>
+          <label className="block cursor-pointer rounded-xl border border-dashed border-borde bg-superficie p-10 text-center hover:border-primario/60">
+            <FileUp size={26} className="mx-auto mb-2 text-texto-tenue" />
+            <p className="text-sm font-medium text-texto">
+              {nombreArchivo || 'Elige el archivo CSV'}
+            </p>
+            <p className="mt-1 text-xs text-texto-tenue">
+              Columnas: Nombre, telefono, seccion1, seccion2… · guardado en UTF-8
+            </p>
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              onChange={(e) => {
+                const archivo = e.target.files?.[0]
+                if (archivo) void elegirArchivo(archivo)
+                e.target.value = ''
+              }}
+            />
+          </label>
 
-          <button
-            type="button"
-            onClick={(e) => {
-              // El recuadro entero abre el selector de archivo; este botón no
-              // debe dispararlo también.
-              e.preventDefault()
-              e.stopPropagation()
-              descargarEjemplo()
-            }}
-            className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-borde px-3 py-1.5 text-xs text-texto-tenue hover:text-primario"
-          >
-            <Download size={13} />
-            Descargar ejemplo
-          </button>
-          <input
-            type="file"
-            accept=".csv,text/csv"
-            className="hidden"
-            onChange={(e) => {
-              const archivo = e.target.files?.[0]
-              if (archivo) void elegirArchivo(archivo)
-              e.target.value = ''
-            }}
-          />
-        </label>
+          <div className="mt-3 text-center">
+            <button
+              type="button"
+              onClick={descargarEjemplo}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-borde px-3 py-1.5 text-xs text-texto-tenue hover:text-primario"
+            >
+              <Download size={13} />
+              Descargar archivo de ejemplo
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Vista previa */}
