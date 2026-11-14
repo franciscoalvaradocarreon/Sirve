@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Copy, FileUp, KeyRound, Pencil, Search, Smartphone, Trash2, UserPlus } from 'lucide-react'
+import { Copy, FileUp, KeyRound, Link2, Pencil, Search, Smartphone, Trash2, UserPlus } from 'lucide-react'
 import { capturistaServicio } from '../api/capturistaServicio'
 import type { Capturista, CodigoEnrolamiento, Telefono } from '../types'
 
@@ -16,6 +16,30 @@ export function Capturistas() {
   const [elegido, setElegido] = useState<Capturista | null>(null)
   const [telefonos, setTelefonos] = useState<Telefono[]>([])
   const [codigo, setCodigo] = useState<CodigoEnrolamiento | null>(null)
+
+  /**
+   * El código generado se guarda por capturista en la sesión del navegador.
+   *
+   * Antes vivía solo en memoria: cambiar de capturista o de pantalla lo hacía
+   * desaparecer, y como en la base solo queda su hash, ya no había forma de
+   * recuperarlo. Ahora vuelve a aparecer al regresar, hasta que se cierre el
+   * navegador o se genere otro.
+   */
+  const CLAVE_CODIGO = 'sirve:codigo-enrolamiento'
+
+  function recordarCodigo(idCapturista: number, c: CodigoEnrolamiento | null) {
+    if (c) sessionStorage.setItem(`${CLAVE_CODIGO}:${idCapturista}`, JSON.stringify(c))
+    else sessionStorage.removeItem(`${CLAVE_CODIGO}:${idCapturista}`)
+  }
+
+  function codigoRecordado(idCapturista: number): CodigoEnrolamiento | null {
+    try {
+      const crudo = sessionStorage.getItem(`${CLAVE_CODIGO}:${idCapturista}`)
+      return crudo ? (JSON.parse(crudo) as CodigoEnrolamiento) : null
+    } catch {
+      return null
+    }
+  }
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [busqueda, setBusqueda] = useState('')
@@ -48,14 +72,16 @@ export function Capturistas() {
 
   async function seleccionar(c: Capturista) {
     setElegido(c)
-    setCodigo(null)
+    setCodigo(codigoRecordado(c.id))
     setTelefonos(await capturistaServicio.telefonos(c.id).catch(() => []))
   }
 
   async function generarCodigo() {
     if (!elegido) return
     try {
-      setCodigo(await capturistaServicio.nuevoTelefono(elegido.id))
+      const nuevo = await capturistaServicio.nuevoTelefono(elegido.id)
+      setCodigo(nuevo)
+      recordarCodigo(elegido.id, nuevo)
       setTelefonos(await capturistaServicio.telefonos(elegido.id))
       recargar()
     } catch (e) {
@@ -66,7 +92,9 @@ export function Capturistas() {
   async function reemitir(idDispositivo: number) {
     if (!elegido) return
     try {
-      setCodigo(await capturistaServicio.reemitirCodigo(idDispositivo))
+      const nuevo = await capturistaServicio.reemitirCodigo(idDispositivo)
+      setCodigo(nuevo)
+      recordarCodigo(elegido.id, nuevo)
       setTelefonos(await capturistaServicio.telefonos(elegido.id))
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo reemitir')
@@ -320,10 +348,10 @@ export function Capturistas() {
                 ))}
               </ul>
 
-              {codigo && (
+              {codigo && elegido && (
                 <div className="mt-3 rounded-lg border border-primario/40 bg-primario/10 p-3">
                   <p className="text-xs text-texto-tenue">
-                    Código · se muestra una sola vez
+                    Código de enrolamiento · vale hasta que se use
                   </p>
                   <div className="mt-1 flex items-center justify-between gap-2">
                     <span className="font-mono text-xl tracking-[0.2em] text-texto">
@@ -332,10 +360,51 @@ export function Capturistas() {
                     <button
                       onClick={() => void navigator.clipboard?.writeText(codigo.codigo)}
                       className="rounded p-1.5 text-texto-tenue hover:text-primario"
-                      title="Copiar"
+                      title="Copiar el código"
                     >
                       <Copy size={15} />
                     </button>
+                  </div>
+
+                  {/*
+                    El enlace es la forma recomendada: el capturista lo abre
+                    desde WhatsApp y el código se escribe solo. Dictar ocho
+                    caracteres por teléfono es donde más se equivocan.
+                  */}
+                  <p className="mt-2 text-xs text-texto-tenue">
+                    Mejor mándale el enlace: al abrirlo, el código se escribe solo.
+                  </p>
+
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      onClick={() =>
+                        void navigator.clipboard?.writeText(
+                          `${window.location.origin}/movil?codigo=${codigo.codigo}`,
+                        )
+                      }
+                      className="flex items-center gap-1.5 rounded-lg border border-borde bg-superficie px-2.5 py-1.5 text-xs text-texto-tenue hover:text-primario"
+                      title="Copiar el enlace de enrolamiento"
+                    >
+                      <Link2 size={13} />
+                      Copiar enlace
+                    </button>
+
+                    {elegido.telefono && (
+                      <a
+                        href={`https://wa.me/52${elegido.telefono.replace(/\D/g, '')}?text=${encodeURIComponent(
+                          `Hola ${elegido.nombre}. Abre este enlace en tu teléfono para quedar listo para capturar:\n\n` +
+                            `${window.location.origin}/movil?codigo=${codigo.codigo}\n\n` +
+                            `Ábrelo y pulsa «Enlazar teléfono». Solo sirve una vez.`,
+                        )}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-1.5 rounded-lg bg-[#25D366] px-2.5 py-1.5 text-xs font-medium text-white"
+                        title="Enviar por WhatsApp"
+                      >
+                        <WhatsApp />
+                        Enviar por WhatsApp
+                      </a>
+                    )}
                   </div>
                 </div>
               )}
@@ -407,4 +476,12 @@ function sinAcentos(texto: string): string {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
+}
+/** Icono de WhatsApp. Lucide no lo incluye, así que se dibuja aquí. */
+function WhatsApp() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91S17.5 2 12.04 2zm5.8 14.16c-.24.68-1.42 1.31-1.96 1.36-.54.05-1.05.24-3.53-.73-2.99-1.18-4.87-4.26-5.02-4.46-.15-.2-1.18-1.57-1.18-3 0-1.42.75-2.12 1.01-2.41.27-.29.58-.36.78-.36.2 0 .39 0 .56.01.18.01.42-.07.66.5.24.59.83 2.01.9 2.16.07.15.12.32.02.51-.1.2-.15.32-.29.49-.15.17-.31.39-.44.52-.15.15-.3.31-.13.61.17.29.75 1.24 1.61 2.01 1.11.99 2.04 1.3 2.33 1.45.29.15.46.12.63-.07.17-.2.73-.85.93-1.14.2-.29.39-.24.66-.15.27.1 1.71.81 2 .96.29.15.49.22.56.34.07.13.07.72-.17 1.4z" />
+    </svg>
+  )
 }

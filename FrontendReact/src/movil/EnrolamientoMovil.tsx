@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { KeyRound, TriangleAlert } from 'lucide-react'
 import { dispositivoServicio } from '../api/dispositivoServicio'
 import { guardarSesion } from '../utils/sesion'
@@ -15,6 +16,18 @@ import { guardarSesion } from '../utils/sesion'
  */
 export function EnrolamientoMovil({ alEnrolar }: { alEnrolar: () => void }) {
   const [codigo, setCodigo] = useState('')
+  const [parametros] = useSearchParams()
+
+  /*
+   * Si llega desde el enlace que mandó la coordinación, el código viene en la
+   * dirección y se escribe solo. Aun así hay que pulsar «Enlazar»: abrir un
+   * enlace por accidente no debe enrolar el teléfono.
+   */
+  useEffect(() => {
+    const deLaLiga = parametros.get('codigo')
+    if (deLaLiga) setCodigo(deLaLiga.toUpperCase())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
