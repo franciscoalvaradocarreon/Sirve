@@ -90,6 +90,25 @@ services:
       DB_URL:      "jdbc:postgresql://db:5432/${DB_NAME:-SIRVE}"
       DB_USER:     "${DB_APP_USER:-sirve_app}"
       DB_PASSWORD: "${DB_PASSWORD_APP:?falta DB_PASSWORD_APP: es la clave de sirve_app}"
+
+      # ---------------------------------------------------------------------
+      # Configuración de la aplicación.
+      #
+      # Estas variables NO llegaban al contenedor: definirlas en el .env no
+      # servía de nada, y la aplicación usaba los valores escritos en el código
+      # —incluida la clave de firma de los tokens, que es de desarrollo—.
+      #
+      # Cada una lleva su valor por omisión, salvo JWT_CLAVE: si falta, el
+      # arranque falla en vez de firmar con una clave que está en el
+      # repositorio.
+      # ---------------------------------------------------------------------
+      JWT_CLAVE:            "${JWT_CLAVE:?falta JWT_CLAVE en .env: firma los tokens de sesión}"
+      JWT_HORAS:            "${JWT_HORAS:-12}"
+      ENROLAMIENTO_HORAS:   "${ENROLAMIENTO_HORAS:-3}"
+      SALA_HABILITADA:      "${SALA_HABILITADA:-false}"
+      LIMITE_CREDENCIAL:    "${LIMITE_CREDENCIAL:-600}"
+      LIMITE_ANONIMA:       "${LIMITE_ANONIMA:-300}"
+      LIMITE_CREDENCIALES:  "${LIMITE_CREDENCIALES:-20}"
       TZ:          "America/Mexico_City"
     networks:
       - interna
