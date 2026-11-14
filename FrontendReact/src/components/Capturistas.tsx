@@ -59,6 +59,32 @@ export function Capturistas() {
     }
   }
 
+  /**
+   * Elimina al capturista.
+   *
+   * Se lleva sus secciones y sus teléfonos (la base lo hace en cascada), pero
+   * NO sus capturas: esas quedan sin dueño, con `id_capturista` en nulo. El
+   * dato capturado es del proceso electoral, no de la persona.
+   */
+  async function eliminar(c: Capturista) {
+    const aviso =
+      `¿Eliminar a ${c.nombre}?\n\n` +
+      `Se borran sus ${c.secciones.length} secciones asignadas y sus teléfonos.\n` +
+      `Sus capturas se conservan, sin quedar ligadas a nadie.`
+    if (!window.confirm(aviso)) return
+
+    try {
+      await capturistaServicio.eliminar(c.id)
+      if (elegido?.id === c.id) {
+        setElegido(null)
+        setTelefonos([])
+      }
+      recargar()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo eliminar')
+    }
+  }
+
   async function desactivar(idDispositivo: number) {
     if (!elegido) return
     if (!window.confirm('¿Desactivar este teléfono? Dejará de poder capturar.')) return
@@ -165,6 +191,16 @@ export function Capturistas() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        void eliminar(c)
+                      }}
+                      className="inline-flex rounded p-1.5 text-texto-tenue hover:text-red-600"
+                      title="Eliminar capturista"
+                    >
+                      <Trash2 size={15} />
+                    </button>
                     <Link
                       to={`/capturistas/${c.id}`}
                       onClick={(e) => e.stopPropagation()}
