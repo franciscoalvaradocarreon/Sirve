@@ -74,6 +74,11 @@ app:
   admin:
     clave: ${ADMIN_CLAVE:}
 
+  # Interruptor de la sala de resultados. Apagada, la página existe pero no
+  # publica cifras: se enciende el día de la jornada.
+  sala:
+    habilitada: ${SALA_HABILITADA:false}
+
   # Horas que vale un código de enrolamiento antes de caducar.
   enrolamiento:
     horas: ${ENROLAMIENTO_HORAS:3}

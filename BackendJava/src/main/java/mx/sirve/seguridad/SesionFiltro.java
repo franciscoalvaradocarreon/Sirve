@@ -45,7 +45,9 @@ public class SesionFiltro extends OncePerRequestFilter {
             // Catálogos que el teléfono consulta para armar su captura: los
             // vigila el filtro del pase, que acepta pase o sesión.
             "/api/procesos",
-            "/api/elecciones"
+            "/api/elecciones",
+            // La sala de resultados va en una pantalla pública, sin sesión.
+            "/api/publico/sala"
     );
 
     /**

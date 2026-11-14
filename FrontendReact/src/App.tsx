@@ -24,6 +24,8 @@ import { Login } from './components/Login'
 import { Usuarios } from './components/Usuarios'
 import { UsuariosMenus } from './components/UsuariosMenus'
 import { ImportarCapturistas } from './components/ImportarCapturistas'
+import { Sala } from './components/Sala'
+import { Operacion } from './components/Operacion'
 
 /** Deja pasar solo con sesión iniciada; si no, manda al login. */
 function RutaPrivada({ children }: { children: React.ReactNode }) {
@@ -38,6 +40,9 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          {/* Sala de resultados: pública y a pantalla completa, sin menú ni
+              sesión, igual que el móvil. Va fuera del armazón a propósito. */}
+          <Route path="/sala" element={<Sala />} />
           {/* Escritorio: menú lateral */}
           <Route element={<RutaPrivada><Layout /></RutaPrivada>}>
             <Route index element={<Inicio />} />
@@ -50,6 +55,7 @@ export default function App() {
             <Route path="/captura" element={<Captura />} />
             <Route path="/captura/consulta" element={<EnConstruccion titulo="Consultar captura" />} />
             <Route path="/reportes/avance" element={<Avance />} />
+            <Route path="/reportes/operacion" element={<Operacion />} />
             <Route path="/reportes/asignacion" element={<AsignacionReporte />} />
             <Route path="/reportes/actas" element={<ActasReporte />} />
             <Route path="/capturistas" element={<Capturistas />} />
