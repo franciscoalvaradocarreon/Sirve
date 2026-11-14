@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Copy, KeyRound, Pencil, Smartphone, Trash2, UserPlus } from 'lucide-react'
+import { Copy, FileUp, KeyRound, Pencil, Smartphone, Trash2, UserPlus } from 'lucide-react'
 import { capturistaServicio } from '../api/capturistaServicio'
 import type { Capturista, CodigoEnrolamiento, Telefono } from '../types'
 
@@ -76,13 +76,22 @@ export function Capturistas() {
             {numero(lista.length)} personas · se les asignan secciones
           </p>
         </div>
-        <Link
-          to="/capturistas/nuevo"
-          className="flex items-center gap-2 rounded-lg bg-primario px-3 py-2 text-sm font-medium text-white"
-        >
-          <UserPlus size={16} />
-          Nuevo capturista
-        </Link>
+        <span className="flex gap-2">
+          <Link
+            to="/capturistas/importar"
+            className="flex items-center gap-2 rounded-lg border border-borde px-3 py-2 text-sm text-texto-tenue hover:text-primario"
+          >
+            <FileUp size={16} />
+            Importar
+          </Link>
+          <Link
+            to="/capturistas/nuevo"
+            className="flex items-center gap-2 rounded-lg bg-primario px-3 py-2 text-sm font-medium text-white"
+          >
+            <UserPlus size={16} />
+            Nuevo capturista
+          </Link>
+        </span>
       </header>
 
       {error && (

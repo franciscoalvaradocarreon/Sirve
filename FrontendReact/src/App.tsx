@@ -22,6 +22,7 @@ import { TemaProveedor } from './context/TemaContext'
 import { SesionProveedor, useSesion } from './context/SesionContext'
 import { Login } from './components/Login'
 import { Usuarios } from './components/Usuarios'
+import { ImportarCapturistas } from './components/ImportarCapturistas'
 
 /** Deja pasar solo con sesión iniciada; si no, manda al login. */
 function RutaPrivada({ children }: { children: React.ReactNode }) {
@@ -52,6 +53,7 @@ export default function App() {
             <Route path="/reportes/actas" element={<ActasReporte />} />
             <Route path="/capturistas" element={<Capturistas />} />
             <Route path="/capturistas/nuevo" element={<CapturistaFormulario />} />
+            <Route path="/capturistas/importar" element={<ImportarCapturistas />} />
             <Route path="/capturistas/:id" element={<CapturistaFormulario />} />
             <Route path="/usuarios" element={<Usuarios />} />
           </Route>

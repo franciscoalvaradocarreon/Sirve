@@ -4,7 +4,9 @@ import mx.sirve.modelo.dto.CapturistaCrearDTO;
 import mx.sirve.modelo.dto.CapturistaDTO;
 import mx.sirve.modelo.dto.CodigoEnrolamientoDTO;
 import mx.sirve.modelo.dto.DispositivoDTO;
+import mx.sirve.modelo.dto.ImportacionDTO;
 import mx.sirve.servicio.CapturistaServicio;
+import mx.sirve.servicio.ImportacionServicio;
 import mx.sirve.servicio.DispositivoServicio;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -34,11 +36,26 @@ public class CapturistaControlador {
 
     private final CapturistaServicio capturistas;
     private final DispositivoServicio dispositivos;
+    private final ImportacionServicio importacion;
 
     public CapturistaControlador(CapturistaServicio capturistas,
-                                 DispositivoServicio dispositivos) {
+                                 DispositivoServicio dispositivos,
+                                 ImportacionServicio importacion) {
         this.capturistas = capturistas;
         this.dispositivos = dispositivos;
+        this.importacion = importacion;
+    }
+
+    /**
+     * Alta masiva desde un archivo.
+     *
+     * El archivo se lee en el navegador y se manda ya convertido a filas: así
+     * el servidor no tiene que interpretar comas dentro de comillas ni
+     * codificaciones, que es donde suelen romperse estas cosas.
+     */
+    @PostMapping("/importar")
+    public ResponseEntity<ImportacionDTO.Resultado> importar(@RequestBody ImportacionDTO datos) {
+        return ResponseEntity.ok(importacion.importar(datos.filas()));
     }
 
     @GetMapping
