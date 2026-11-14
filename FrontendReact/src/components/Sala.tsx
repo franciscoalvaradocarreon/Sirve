@@ -23,6 +23,8 @@ interface Hora {
 interface Sala {
   habilitada: boolean
   servidor: string
+  /** Texto que se muestra mientras la sala está apagada. */
+  mensaje?: string
   eleccion?: string
   total?: number
   capturadas?: number
@@ -120,7 +122,7 @@ export function Sala() {
           <p className="text-4xl font-semibold text-texto">Resultados</p>
           <p className="mt-4 text-lg text-texto-tenue">
             {datos && !datos.habilitada
-              ? 'Los resultados se publicarán el día de la jornada.'
+              ? (datos.mensaje ?? 'Los resultados se publicarán el día de la jornada.')
               : error}
           </p>
         </div>
