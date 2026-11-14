@@ -32,12 +32,12 @@ public class DispositivoRepositorio {
             rs.getObject("ultimo_uso", java.time.OffsetDateTime.class));
 
     /** Alta de un dispositivo con su código de enrolamiento, ya hasheado. */
-    public int crear(int idCapturista, String nombre, String codigoHash) {
+    public int crear(int idCapturista, String nombre, String codigoHash, int horas) {
         Integer id = jdbc.queryForObject("""
-                INSERT INTO sirve.dispositivo (id_capturista, nombre, codigo_hash)
-                VALUES (?, ?, ?)
+                INSERT INTO sirve.dispositivo (id_capturista, nombre, codigo_hash, codigo_expira)
+                VALUES (?, ?, ?, now() + (? || ' hours')::interval)
                 RETURNING id
-                """, Integer.class, idCapturista, nombre, codigoHash);
+                """, Integer.class, idCapturista, nombre, codigoHash, horas);
         return id == null ? 0 : id;
     }
 
@@ -107,11 +107,30 @@ public class DispositivoRepositorio {
     }
 
     /** Dispositivo pendiente de enrolar, con el código que trae el capturista. */
+    /**
+     * Busca por código aunque esté vencido.
+     *
+     * Sirve para distinguir dos casos que el usuario vive distinto: «ese código
+     * no existe» y «ese código caducó». El segundo se arregla generando otro;
+     * el primero suele ser un error al dictarlo.
+     */
+    public Optional<Object[]> porCodigoSinCaducidad(String codigoHash) {
+        List<Object[]> filas = jdbc.query("""
+                SELECT id, id_capturista, codigo_expira
+                  FROM sirve.dispositivo
+                 WHERE codigo_hash = ? AND activo AND pase_hash IS NULL
+                """, (rs, n) -> new Object[]{
+                    rs.getInt("id"), rs.getInt("id_capturista"),
+                    rs.getObject("codigo_expira", java.time.OffsetDateTime.class)});
+        return filas.stream().findFirst();
+    }
+
     public Optional<int[]> porCodigo(String codigoHash) {
         List<int[]> filas = jdbc.query("""
                 SELECT id, id_capturista
                   FROM sirve.dispositivo
                  WHERE codigo_hash = ? AND activo AND pase_hash IS NULL
+                  AND (codigo_expira IS NULL OR codigo_expira > now())
                 """, (rs, n) -> new int[]{rs.getInt("id"), rs.getInt("id_capturista")}, codigoHash);
         return filas.stream().findFirst();
     }
@@ -134,7 +153,7 @@ public class DispositivoRepositorio {
     }
 
     /** Reemite el código: borra el pase y deja uno nuevo pendiente de usar. */
-    public void reemitir(int idDispositivo, String codigoHash) {
+    public void reemitir(int idDispositivo, String codigoHash, int horas) {
         jdbc.update("""
                 UPDATE sirve.dispositivo
                    SET codigo_hash = ?, pase_hash = NULL, enrolado_en = NULL, activo = true

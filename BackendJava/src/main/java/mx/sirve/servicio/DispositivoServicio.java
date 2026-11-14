@@ -25,6 +25,10 @@ import java.util.Optional;
 @Transactional
 public class DispositivoServicio {
 
+    /** Horas que vale un código de enrolamiento. */
+    @org.springframework.beans.factory.annotation.Value("${app.enrolamiento.horas:24}")
+    private int horasCodigo;
+
     private final DispositivoRepositorio dispositivos;
     private final CapturistaRepositorio capturistas;
     private final EleccionServicio eleccionServicio;
@@ -57,10 +61,11 @@ public class DispositivoServicio {
         Optional<Integer> pendiente = dispositivos.sinEnrolar(idCapturista);
         if (pendiente.isPresent()) {
             int id = pendiente.get();
-            dispositivos.reemitir(id, Pases.hash(codigo));
+            dispositivos.reemitir(id, Pases.hash(codigo), horasCodigo);
             // Los que quedaron de pruebas anteriores no sirven para nada.
             dispositivos.depurarSinEnrolar(idCapturista, id);
-            return new CodigoEnrolamientoDTO(id, codigo, nombre);
+            return new CodigoEnrolamientoDTO(id, codigo, nombre, 
+                java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC).plusHours(horasCodigo));
         }
 
         /*
@@ -68,15 +73,17 @@ public class DispositivoServicio {
          * normal, y un código que nadie usó no es un teléfono en operación.
          * El tope se aplica al enrolar.
          */
-        int id = dispositivos.crear(idCapturista, nombre, Pases.hash(codigo));
-        return new CodigoEnrolamientoDTO(id, codigo, nombre);
+        int id = dispositivos.crear(idCapturista, nombre, Pases.hash(codigo), horasCodigo);
+        return new CodigoEnrolamientoDTO(id, codigo, nombre, 
+                java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC).plusHours(horasCodigo));
     }
 
     /** Reemite el código de un dispositivo: sirve para cambiar de teléfono. */
     public CodigoEnrolamientoDTO reemitir(int idDispositivo) {
         String codigo = Pases.nuevoCodigo();
-        dispositivos.reemitir(idDispositivo, Pases.hash(codigo));
-        return new CodigoEnrolamientoDTO(idDispositivo, codigo, null);
+        dispositivos.reemitir(idDispositivo, Pases.hash(codigo), horasCodigo);
+        return new CodigoEnrolamientoDTO(idDispositivo, codigo, null, 
+                java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC).plusHours(horasCodigo));
     }
 
     /**
@@ -91,9 +98,21 @@ public class DispositivoServicio {
             throw new DatosInvalidosExcepcion("El código no es válido.");
         }
 
-        int[] dispositivo = dispositivos.porCodigo(Pases.hash(limpio))
+        String hash = Pases.hash(limpio);
+
+        // Se busca sin filtrar por caducidad para poder distinguir «no existe»
+        // de «caducó»: son dos problemas distintos y se arreglan distinto.
+        Object[] fila = dispositivos.porCodigoSinCaducidad(hash)
                 .orElseThrow(() -> new DatosInvalidosExcepcion(
                         "El código no es válido o ya se usó. Pide uno nuevo."));
+
+        java.time.OffsetDateTime expira = (java.time.OffsetDateTime) fila[2];
+        if (expira != null && expira.isBefore(java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC))) {
+            throw new DatosInvalidosExcepcion("CODIGO_CADUCADO",
+                    "Este código caducó. Pide uno nuevo a quien coordina la captura.");
+        }
+
+        int[] dispositivo = new int[]{((Number) fila[0]).intValue(), ((Number) fila[1]).intValue()};
 
         // El tope de teléfonos se revisa aquí: es el momento en que uno entra
         // en operación de verdad.

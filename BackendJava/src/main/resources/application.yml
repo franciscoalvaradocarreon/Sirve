@@ -74,6 +74,10 @@ app:
   admin:
     clave: ${ADMIN_CLAVE:}
 
+  # Horas que vale un código de enrolamiento antes de caducar.
+  enrolamiento:
+    horas: ${ENROLAMIENTO_HORAS:24}
+
   # Límites por minuto. El de credencial es alto a propósito: las operadoras
   # móviles usan CGNAT y cientos de teléfonos comparten una IP pública, así que
   # el tráfico autenticado se cuenta por credencial y no por dirección.

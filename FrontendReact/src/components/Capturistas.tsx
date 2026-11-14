@@ -351,7 +351,12 @@ export function Capturistas() {
               {codigo && elegido && (
                 <div className="mt-3 rounded-lg border border-primario/40 bg-primario/10 p-3">
                   <p className="text-xs text-texto-tenue">
-                    Código de enrolamiento · vale hasta que se use
+                    Código de enrolamiento
+                    {codigo.expira && (
+                      <> · vale hasta {new Date(codigo.expira).toLocaleString('es-MX', {
+                        day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+                      })}</>
+                    )}
                   </p>
                   <div className="mt-1 flex items-center justify-between gap-2">
                     <span className="font-mono text-xl tracking-[0.2em] text-texto">

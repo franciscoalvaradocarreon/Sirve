@@ -201,6 +201,8 @@ export interface CodigoEnrolamiento {
   id_dispositivo: number
   codigo: string
   nombre: string | null
+  /** Hasta cuándo sirve el código, en ISO. */
+  expira: string | null
 }
 
 /** Menú tal como lo manda el servidor: sin icono, con su nombre. */
