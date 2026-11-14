@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Copy, FileUp, KeyRound, Pencil, Smartphone, Trash2, UserPlus } from 'lucide-react'
+import { Copy, FileUp, KeyRound, Pencil, Search, Smartphone, Trash2, UserPlus } from 'lucide-react'
 import { capturistaServicio } from '../api/capturistaServicio'
 import type { Capturista, CodigoEnrolamiento, Telefono } from '../types'
 
@@ -18,6 +18,20 @@ export function Capturistas() {
   const [codigo, setCodigo] = useState<CodigoEnrolamiento | null>(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [busqueda, setBusqueda] = useState('')
+
+  /**
+   * Filtra por nombre sin distinguir mayúsculas ni acentos.
+   *
+   * «jose» debe encontrar a «José Luis Ramírez»: quien busca en un teléfono
+   * rara vez escribe el acento, y no encontrar a alguien por eso sería peor
+   * que no tener buscador.
+   */
+  const filtrados = useMemo(() => {
+    const t = sinAcentos(busqueda.trim())
+    if (!t) return lista
+    return lista.filter((c) => sinAcentos(c.nombre).includes(t))
+  }, [lista, busqueda])
 
   const numero = (n: number) => n.toLocaleString('es-MX')
 
@@ -99,9 +113,24 @@ export function Capturistas() {
         <div>
           <h1 className="text-xl font-semibold text-texto">Capturistas</h1>
           <p className="mt-1 text-sm text-texto-tenue">
-            {numero(lista.length)} personas · se les asignan secciones
+            {busqueda.trim()
+              ? `${numero(filtrados.length)} de ${numero(lista.length)} coinciden`
+              : `${numero(lista.length)} personas · se les asignan secciones`}
           </p>
         </div>
+        <label className="relative w-56">
+          <Search
+            size={15}
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-texto-tenue"
+          />
+          <input
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Buscar por nombre…"
+            className="w-full rounded-lg border border-borde bg-superficie py-2 pl-9 pr-3 text-sm text-texto placeholder:text-texto-tenue"
+          />
+        </label>
+
         <span className="flex gap-2">
           <Link
             to="/capturistas/importar"
@@ -147,6 +176,14 @@ export function Capturistas() {
                 </tr>
               )}
 
+              {!cargando && lista.length > 0 && filtrados.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-10 text-center text-texto-tenue">
+                    Nadie coincide con «{busqueda}».
+                  </td>
+                </tr>
+              )}
+
               {!cargando && lista.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-4 py-10 text-center text-texto-tenue">
@@ -159,7 +196,7 @@ export function Capturistas() {
                 </tr>
               )}
 
-              {lista.map((c) => (
+              {filtrados.map((c) => (
                 <tr
                   key={c.id}
                   onClick={() => void seleccionar(c)}
@@ -363,4 +400,11 @@ export function Capturistas() {
       </div>
     </div>
   )
+}
+/** Quita acentos y baja a minúsculas, para comparar nombres al buscar. */
+function sinAcentos(texto: string): string {
+  return texto
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
 }
