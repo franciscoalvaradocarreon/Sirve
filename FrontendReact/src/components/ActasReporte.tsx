@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Image as ImageIcon, Search } from 'lucide-react'
 import { cliente } from '../api/cliente'
-import { ActaImagen, urlDeActa } from './ActaImagen'
 import { procesoServicio } from '../api/procesoServicio'
 import type { Eleccion, Proceso } from '../types'
 
@@ -125,12 +124,7 @@ export function ActasReporte() {
     )
   }, [filas, busqueda])
 
-  // Sin elección no hay imagen que pedir; las vistas de abajo solo se pintan
-  // cuando hay una, así que aquí ya es un número.
-  const eleccion = idEleccion ?? 0
-
   const acta = filtradas.find((f) => f.id_casilla === elegida) ?? null
-
   const indice = acta ? filtradas.findIndex((f) => f.id_casilla === acta.id_casilla) : -1
 
   /** Desplaza el carril de miniaturas un bloque, sin cambiar de acta. */
@@ -144,23 +138,6 @@ export function ActasReporte() {
     if (filtradas.length === 0) return
     const siguiente = (indice + salto + filtradas.length) % filtradas.length
     setElegida(filtradas[siguiente].id_casilla)
-  }
-
-  /**
-   * Abre el acta a tamaño completo en otra pestaña.
-   *
-   * No basta con un enlace a /api/actas/…/imagen: esa ruta pide el token en una
-   * cabecera, y al abrirla en otra pestaña el navegador no lo manda. Se descarga
-   * primero y se abre la dirección temporal del navegador, que ya no depende de
-   * credenciales.
-   */
-  const abrirCompleta = async (idCasilla: number) => {
-    try {
-      const url = await urlDeActa(idCasilla, eleccion)
-      window.open(url, '_blank', 'noopener')
-    } catch {
-      setError('No se pudo abrir la imagen del acta.')
-    }
   }
 
   /*
@@ -364,10 +341,10 @@ export function ActasReporte() {
                     : 'border-borde hover:border-primario/60'
                 }`}
               >
-                <ActaImagen
-                  idCasilla={a.id_casilla}
-                  idEleccion={eleccion}
+                <img
+                  src={`/api/actas/${a.id_casilla}/${idEleccion}/imagen`}
                   alt={`Acta ${rotulo(a)}`}
+                  loading="lazy"
                   className="aspect-[4/3] w-full bg-fondo-alt object-cover"
                 />
                 <span
@@ -415,12 +392,14 @@ export function ActasReporte() {
               >
                 <ChevronRight size={16} />
               </button>
-              <button
-                onClick={() => void abrirCompleta(acta.id_casilla)}
+              <a
+                href={`/api/actas/${acta.id_casilla}/${idEleccion}/imagen`}
+                target="_blank"
+                rel="noreferrer"
                 className="ml-2 text-xs text-primario hover:underline"
               >
                 Ver completa
-              </button>
+              </a>
             </span>
           </div>
 
@@ -435,18 +414,19 @@ export function ActasReporte() {
               <ChevronLeft size={44} />
             </button>
 
-            <button
-              onClick={() => void abrirCompleta(acta.id_casilla)}
+            <a
+              href={`/api/actas/${acta.id_casilla}/${idEleccion}/imagen`}
+              target="_blank"
+              rel="noreferrer"
               title="Ver completa"
               className="block"
             >
-              <ActaImagen
-                idCasilla={acta.id_casilla}
-                idEleccion={eleccion}
+              <img
+                src={`/api/actas/${acta.id_casilla}/${idEleccion}/imagen`}
                 alt={`Acta ${rotulo(acta)}`}
                 className="max-h-[60vh] cursor-zoom-in rounded-lg object-contain"
               />
-            </button>
+            </a>
 
             <button
               onClick={() => mover(1)}
