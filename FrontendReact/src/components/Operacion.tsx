@@ -260,133 +260,132 @@ export function Operacion() {
             </div>
           </div>
 
-          {/* Avance */}
-          <div className="mb-5 h-3 overflow-hidden rounded-full bg-fondo-alt">
-            <div className="h-full rounded-full bg-primario" style={{ width: `${datos.avance}%` }} />
+
+          {/* Avance por municipio: es lo primero que se mira para saber dónde falta. */}
+          <div className="mb-4 rounded-xl border border-borde bg-superficie p-4">
+          <h2 className="mb-3 text-sm font-semibold text-texto">Avance por municipio</h2>
+          {/*
+            Antes era un mapa de calor: el fondo se teñía según el avance y el
+            número iba encima. Con el fondo al 100 % el texto quedaba del mismo
+            color que el relleno y no se leía. Ahora es una barra con el número
+            al lado: se compara igual de rápido y se lee siempre.
+          */}
+          <div className="grid gap-x-4 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
+            {datos.municipios.map((m) => {
+              const pct = m.total === 0 ? 0 : Math.round((m.capturadas / m.total) * 100)
+              const completo = pct >= 100
+              return (
+                <div
+                  key={m.municipio}
+                  className="flex items-center gap-2 py-0.5"
+                  title={`${m.municipio}: ${m.capturadas} de ${m.total} casillas`}
+                >
+                  <span className="w-28 shrink-0 truncate text-xs text-texto">
+                    {m.municipio}
+                  </span>
+                  <span className="h-2 flex-1 overflow-hidden rounded-full bg-fondo-alt">
+                    <span
+                      className={`block h-full rounded-full ${completo ? 'bg-primario' : 'bg-amber-500'}`}
+                      style={{ width: `${Math.max(2, pct)}%` }}
+                    />
+                  </span>
+                  <span className="w-11 shrink-0 text-right text-xs tabular-nums text-texto">
+                    {pct}%
+                  </span>
+                </div>
+              )
+            })}
+          </div>
           </div>
 
+          <div className="mb-4 grid gap-4 lg:grid-cols-2">
+          {/* Resultados */}
+          <div className="rounded-xl border border-borde bg-superficie p-4">
+            <h2 className="mb-3 text-sm font-semibold text-texto">Resultados</h2>
+            <div className="space-y-2">
+              {datos.resultados.map((r) => (
+                <div key={r.etiqueta} className="flex items-center gap-2">
+                  <span className="w-24 shrink-0 truncate text-right text-xs text-texto">
+                    {r.etiqueta}
+                  </span>
+                  <div className="h-5 flex-1 overflow-hidden rounded bg-fondo-alt">
+                    <div
+                      className="h-full rounded bg-primario"
+                      style={{ width: `${Math.max(3, (r.porcentaje / maxVotos) * 100)}%` }}
+                    />
+                  </div>
+                  <span className="w-14 shrink-0 text-right text-xs tabular-nums text-texto-tenue">
+                    {r.porcentaje}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Ritmo */}
+          <div className="rounded-xl border border-borde bg-superficie p-4">
+            <h2 className="mb-3 text-sm font-semibold text-texto">Ritmo de captura</h2>
+            <div className="flex h-32 items-end gap-1">
+              {datos.porHora.slice(-24).map((h) => (
+                <div
+                  key={h.hora}
+                  title={`${hora(h.hora)} · ${h.capturas}`}
+                  className="flex-1 rounded-t bg-primario"
+                  style={{ height: `${Math.max(3, (h.capturas / maxHora) * 100)}%` }}
+                />
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-texto-tenue">Capturas por hora, últimas 24</p>
+          </div>
+          </div>
+
+          {/* Al final: lo que pide actuar, no lo que se consulta de paso. */}
           <div className="grid gap-4 lg:grid-cols-2">
-            {/* Atrasadas */}
-            <div className="rounded-xl border border-borde bg-superficie p-4">
-              <h2 className="mb-3 text-sm font-semibold text-texto">Secciones con menos avance</h2>
+          {/* Atrasadas */}
+          <div className="rounded-xl border border-borde bg-superficie p-4">
+            <h2 className="mb-3 text-sm font-semibold text-texto">Secciones con menos avance</h2>
+            <table className="w-full text-sm">
+              <tbody>
+                {datos.atrasadas.map((a) => (
+                  <tr key={`${a.municipio}-${a.seccion}`} className="border-b border-borde-tenue last:border-0">
+                    <td className="py-1.5 font-mono text-xs text-texto">{a.seccion}</td>
+                    <td className="truncate py-1.5 text-xs text-texto-tenue">{a.municipio}</td>
+                    <td className="py-1.5 text-right text-xs tabular-nums text-texto-tenue">
+                      {a.capturadas} / {a.total}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Descuadradas */}
+          <div className="rounded-xl border border-borde bg-superficie p-4">
+            <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-texto">
+              <TriangleAlert size={14} className="text-amber-600" />
+              Actas que no cuadran
+            </h2>
+            {datos.descuadradas.length === 0 ? (
+              <p className="text-xs text-texto-tenue">Ninguna. Todas las sumas cuadran.</p>
+            ) : (
               <table className="w-full text-sm">
                 <tbody>
-                  {datos.atrasadas.map((a) => (
-                    <tr key={`${a.municipio}-${a.seccion}`} className="border-b border-borde-tenue last:border-0">
-                      <td className="py-1.5 font-mono text-xs text-texto">{a.seccion}</td>
-                      <td className="truncate py-1.5 text-xs text-texto-tenue">{a.municipio}</td>
-                      <td className="py-1.5 text-right text-xs tabular-nums text-texto-tenue">
-                        {a.capturadas} / {a.total}
+                  {datos.descuadradas.map((d) => (
+                    <tr key={`${d.seccion}-${d.casilla}`} className="border-b border-borde-tenue last:border-0">
+                      <td className="py-1.5 font-mono text-xs text-texto">
+                        {d.seccion}-{d.casilla}
+                      </td>
+                      <td className="truncate py-1.5 text-xs text-texto-tenue">{d.municipio}</td>
+                      <td className="py-1.5 text-right text-xs tabular-nums text-amber-600">
+                        {d.diferencia > 0 ? '+' : ''}
+                        {d.diferencia}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
-
-            {/* Descuadradas */}
-            <div className="rounded-xl border border-borde bg-superficie p-4">
-              <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-texto">
-                <TriangleAlert size={14} className="text-amber-600" />
-                Actas que no cuadran
-              </h2>
-              {datos.descuadradas.length === 0 ? (
-                <p className="text-xs text-texto-tenue">Ninguna. Todas las sumas cuadran.</p>
-              ) : (
-                <table className="w-full text-sm">
-                  <tbody>
-                    {datos.descuadradas.map((d) => (
-                      <tr key={`${d.seccion}-${d.casilla}`} className="border-b border-borde-tenue last:border-0">
-                        <td className="py-1.5 font-mono text-xs text-texto">
-                          {d.seccion}-{d.casilla}
-                        </td>
-                        <td className="truncate py-1.5 text-xs text-texto-tenue">{d.municipio}</td>
-                        <td className="py-1.5 text-right text-xs tabular-nums text-amber-600">
-                          {d.diferencia > 0 ? '+' : ''}
-                          {d.diferencia}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-
-            {/* Resultados */}
-            <div className="rounded-xl border border-borde bg-superficie p-4">
-              <h2 className="mb-3 text-sm font-semibold text-texto">Resultados</h2>
-              <div className="space-y-2">
-                {datos.resultados.map((r) => (
-                  <div key={r.etiqueta} className="flex items-center gap-2">
-                    <span className="w-24 shrink-0 truncate text-right text-xs text-texto">
-                      {r.etiqueta}
-                    </span>
-                    <div className="h-5 flex-1 overflow-hidden rounded bg-fondo-alt">
-                      <div
-                        className="h-full rounded bg-primario"
-                        style={{ width: `${Math.max(3, (r.porcentaje / maxVotos) * 100)}%` }}
-                      />
-                    </div>
-                    <span className="w-14 shrink-0 text-right text-xs tabular-nums text-texto-tenue">
-                      {r.porcentaje}%
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Ritmo */}
-            <div className="rounded-xl border border-borde bg-superficie p-4">
-              <h2 className="mb-3 text-sm font-semibold text-texto">Ritmo de captura</h2>
-              <div className="flex h-32 items-end gap-1">
-                {datos.porHora.slice(-24).map((h) => (
-                  <div
-                    key={h.hora}
-                    title={`${hora(h.hora)} · ${h.capturas}`}
-                    className="flex-1 rounded-t bg-primario"
-                    style={{ height: `${Math.max(3, (h.capturas / maxHora) * 100)}%` }}
-                  />
-                ))}
-              </div>
-              <p className="mt-2 text-xs text-texto-tenue">Capturas por hora, últimas 24</p>
-            </div>
+            )}
           </div>
-
-          {/* Municipios */}
-          <div className="mt-4 rounded-xl border border-borde bg-superficie p-4">
-            <h2 className="mb-3 text-sm font-semibold text-texto">Avance por municipio</h2>
-            {/*
-              Antes era un mapa de calor: el fondo se teñía según el avance y el
-              número iba encima. Con el fondo al 100 % el texto quedaba del mismo
-              color que el relleno y no se leía. Ahora es una barra con el número
-              al lado: se compara igual de rápido y se lee siempre.
-            */}
-            <div className="grid gap-x-4 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
-              {datos.municipios.map((m) => {
-                const pct = m.total === 0 ? 0 : Math.round((m.capturadas / m.total) * 100)
-                const completo = pct >= 100
-                return (
-                  <div
-                    key={m.municipio}
-                    className="flex items-center gap-2 py-0.5"
-                    title={`${m.municipio}: ${m.capturadas} de ${m.total} casillas`}
-                  >
-                    <span className="w-28 shrink-0 truncate text-xs text-texto">
-                      {m.municipio}
-                    </span>
-                    <span className="h-2 flex-1 overflow-hidden rounded-full bg-fondo-alt">
-                      <span
-                        className={`block h-full rounded-full ${completo ? 'bg-primario' : 'bg-amber-500'}`}
-                        style={{ width: `${Math.max(2, pct)}%` }}
-                      />
-                    </span>
-                    <span className="w-11 shrink-0 text-right text-xs tabular-nums text-texto">
-                      {pct}%
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
           </div>
         </>
       )}
