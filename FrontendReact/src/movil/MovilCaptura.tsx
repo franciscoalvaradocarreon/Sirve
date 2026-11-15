@@ -17,7 +17,7 @@ import {
 } from '../utils/borrador'
 import { nuevoUuid } from '../utils/uuid'
 import { fotoServicio } from '../api/fotoServicio'
-import { colaFotos, comprimirFoto } from '../utils/foto'
+import { colaFotos, comprimirFoto, pesoLegible } from '../utils/foto'
 import { useProceso } from './ProcesoContext'
 import { AvisoFlotante } from './AvisoFlotante'
 import type {
@@ -58,6 +58,7 @@ export function MovilCaptura() {
   const [enCola, setEnCola] = useState<CapturaEnCola[]>([])
   /** Foto elegida que todavía no se ha subido: espera al botón Guardar. */
   const [fotoNueva, setFotoNueva] = useState<Blob | null>(null)
+  const [fotoPeso, setFotoPeso] = useState<string | null>(null)
   const [fotoEstado, setFotoEstado] = useState<'ninguna' | 'porEnviar' | 'enviada'>('ninguna')
   const [fotoVista, setFotoVista] = useState<string | null>(null)
   const [fotoCargando, setFotoCargando] = useState(false)
@@ -346,6 +347,7 @@ export function MovilCaptura() {
     try {
       const comprimida = await comprimirFoto(archivo)
       setFotoNueva(comprimida)
+      setFotoPeso(pesoLegible(comprimida.size))
       setFotoVista(URL.createObjectURL(comprimida))
     } catch {
       setAviso({ tipo: 'error', texto: 'No se pudo leer la imagen.' })
@@ -695,7 +697,7 @@ export function MovilCaptura() {
               <p className="text-sm font-medium text-texto">Foto del acta</p>
               <p className="mt-0.5 text-xs text-texto-tenue">
                 {fotoNueva
-                  ? 'Se enviará al guardar el acta.'
+                  ? `Se enviará al guardar el acta.${fotoPeso ? ` Comprimida a ${fotoPeso}.` : ''}`
                   : fotoEstado === 'enviada'
                     ? 'Ya está en el servidor.'
                     : fotoEstado === 'porEnviar'
