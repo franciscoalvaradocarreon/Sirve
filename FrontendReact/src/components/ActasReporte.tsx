@@ -128,21 +128,45 @@ export function ActasReporte() {
   const indice = acta ? filtradas.findIndex((f) => f.id_casilla === acta.id_casilla) : -1
 
   /*
-   * Solo se dibujan las miniaturas cercanas al acta elegida.
+   * Solo se dibuja una ventana de miniaturas, no las ocho mil.
    *
-   * Con seis mil casillas, pintarlas todas deja seis mil etiquetas img en la
-   * página: al avanzar rápido el navegador dispara cientos de descargas y
-   * termina cancelándolas, que es cuando aparecen las imágenes rotas. Además
-   * cada clic obliga a React a recorrer las seis mil.
+   * Pintarlas todas deja ocho mil etiquetas img en la página: al avanzar rápido
+   * el navegador dispara cientos de descargas, las cancela y quedan huecos
+   * rotos. Además cada clic obliga a React a recorrer las ocho mil.
    *
-   * Con una ventana de ochenta, el desplazamiento sigue siendo continuo y el
-   * costo no depende del tamaño de la elección.
+   * La ventana sigue al desplazamiento, no a la casilla elegida. Cuando seguía
+   * a la elegida, mover el carril con sus flechas llevaba a la zona vacía: el
+   * separador que conserva el ancho, sin miniaturas dibujadas.
    */
-  const MARGEN = 40
-  const indiceBase = indice >= 0 ? indice : 0
-  const inicio = Math.max(0, indiceBase - MARGEN)
-  const fin = Math.min(filtradas.length, indiceBase + MARGEN + 1)
+  const ANCHO_MINIATURA = 118 // 112 del recuadro más el espacio entre uno y otro
+  const VENTANA = 120
+
+  const [desde, setDesde] = useState(0)
+
+  const total = filtradas.length
+  const maximoDesde = Math.max(0, total - VENTANA)
+  const inicio = Math.min(Math.max(0, desde), maximoDesde)
+  const fin = Math.min(total, inicio + VENTANA)
   const visibles = filtradas.slice(inicio, fin)
+
+  /** Recalcula la ventana según lo que se ve en el carril. */
+  const alDesplazarCarril = () => {
+    const carril = carrilRef.current
+    if (!carril) return
+    const primero = Math.floor(carril.scrollLeft / ANCHO_MINIATURA) - 8
+    setDesde(Math.min(Math.max(0, primero), Math.max(0, total - VENTANA)))
+  }
+
+  /*
+   * Al cambiar de acta desde las flechas grandes, la ventana se recoloca para
+   * que su miniatura quede dibujada antes de que el carril la traiga a la vista.
+   */
+  useEffect(() => {
+    if (indice < 0) return
+    if (indice < desde || indice >= desde + VENTANA) {
+      setDesde(Math.min(Math.max(0, indice - Math.floor(VENTANA / 2)), Math.max(0, total - VENTANA)))
+    }
+  }, [indice, desde, total])
 
   /** Desplaza el carril de miniaturas un bloque, sin cambiar de acta. */
   const desplazarCarril = (sentido: number) => {
@@ -342,11 +366,12 @@ export function ActasReporte() {
 
         <div
           ref={carrilRef}
+          onScroll={alDesplazarCarril}
           className="flex cursor-grab gap-1.5 overflow-x-auto pb-2 active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {/* Separadores: conservan el ancho del carril para que la barra de
               desplazamiento y las flechas no salten al moverse la ventana. */}
-          {inicio > 0 && <span aria-hidden className="shrink-0" style={{ width: inicio * 118 }} />}
+          {inicio > 0 && <span aria-hidden className="shrink-0" style={{ width: inicio * ANCHO_MINIATURA }} />}
 
           {visibles.map((a) => {
             const activa = a.id_casilla === elegida
@@ -379,8 +404,8 @@ export function ActasReporte() {
             )
           })}
 
-          {fin < filtradas.length && (
-            <span aria-hidden className="shrink-0" style={{ width: (filtradas.length - fin) * 118 }} />
+          {fin < total && (
+            <span aria-hidden className="shrink-0" style={{ width: (total - fin) * ANCHO_MINIATURA }} />
           )}
         </div>
         </div>
