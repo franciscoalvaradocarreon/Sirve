@@ -5,6 +5,7 @@ import mx.sirve.servicio.ActaFotoServicio;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
+import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -60,8 +61,31 @@ public class ActaFotoControlador {
             @PathVariable int idCasilla,
             @PathVariable int idEleccion) {
         Path ruta = servicio.archivo(idCasilla, idEleccion);
+
+        /*
+         * La imagen de una casilla cambia poco: se sube una vez y se reemplaza
+         * solo si hay que corregirla. Sin caché, cada desplazamiento por la
+         * banda de miniaturas volvía a descargar las mismas imágenes, y al
+         * avanzar rápido el navegador terminaba cancelando descargas y dejando
+         * huecos rotos.
+         *
+         * Diez minutos de caché en el navegador y una validación por ETag:
+         * suficiente para que recorrer la galería no cueste una descarga por
+         * miniatura, y corto como para que un reemplazo se vea pronto.
+         */
+        long bytes = 0;
+        try {
+            bytes = java.nio.file.Files.size(ruta);
+        } catch (java.io.IOException e) {
+            // Si no se puede medir, el ETag queda en cero: se pierde la
+            // validación, no la imagen.
+        }
+        String etag = "\"" + bytes + "-" + ruta.getFileName() + "\"";
+
         return ResponseEntity.ok()
                 .contentType(MediaType.IMAGE_JPEG)
+                .cacheControl(CacheControl.maxAge(java.time.Duration.ofMinutes(10)).cachePublic())
+                .eTag(etag)
                 .body(new FileSystemResource(ruta));
     }
 }

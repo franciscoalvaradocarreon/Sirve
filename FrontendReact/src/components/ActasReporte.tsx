@@ -127,6 +127,23 @@ export function ActasReporte() {
   const acta = filtradas.find((f) => f.id_casilla === elegida) ?? null
   const indice = acta ? filtradas.findIndex((f) => f.id_casilla === acta.id_casilla) : -1
 
+  /*
+   * Solo se dibujan las miniaturas cercanas al acta elegida.
+   *
+   * Con seis mil casillas, pintarlas todas deja seis mil etiquetas img en la
+   * página: al avanzar rápido el navegador dispara cientos de descargas y
+   * termina cancelándolas, que es cuando aparecen las imágenes rotas. Además
+   * cada clic obliga a React a recorrer las seis mil.
+   *
+   * Con una ventana de ochenta, el desplazamiento sigue siendo continuo y el
+   * costo no depende del tamaño de la elección.
+   */
+  const MARGEN = 40
+  const indiceBase = indice >= 0 ? indice : 0
+  const inicio = Math.max(0, indiceBase - MARGEN)
+  const fin = Math.min(filtradas.length, indiceBase + MARGEN + 1)
+  const visibles = filtradas.slice(inicio, fin)
+
   /** Desplaza el carril de miniaturas un bloque, sin cambiar de acta. */
   const desplazarCarril = (sentido: number) => {
     const carril = carrilRef.current
@@ -327,7 +344,11 @@ export function ActasReporte() {
           ref={carrilRef}
           className="flex cursor-grab gap-1.5 overflow-x-auto pb-2 active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          {filtradas.map((a) => {
+          {/* Separadores: conservan el ancho del carril para que la barra de
+              desplazamiento y las flechas no salten al moverse la ventana. */}
+          {inicio > 0 && <span aria-hidden className="shrink-0" style={{ width: inicio * 118 }} />}
+
+          {visibles.map((a) => {
             const activa = a.id_casilla === elegida
             return (
               <button
@@ -357,6 +378,10 @@ export function ActasReporte() {
               </button>
             )
           })}
+
+          {fin < filtradas.length && (
+            <span aria-hidden className="shrink-0" style={{ width: (filtradas.length - fin) * 118 }} />
+          )}
         </div>
         </div>
       )}
