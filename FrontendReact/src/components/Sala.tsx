@@ -256,7 +256,7 @@ export function Sala() {
                     <div
                       key={h.hora}
                       title={`${hora(h.hora)} · ${h.capturas}`}
-                      className="flex-1 rounded-t bg-primario/70"
+                      className="flex-1 rounded-t bg-primario"
                       style={{ height: `${Math.max(3, (h.capturas / maxHora) * 100)}%` }}
                     />
                   ))}
@@ -266,20 +266,27 @@ export function Sala() {
 
               <div className="rounded-2xl border border-borde bg-superficie p-6">
                 <h2 className="mb-3 text-lg font-semibold text-texto">Avance por municipio</h2>
-                <div className="grid max-h-40 grid-cols-2 gap-1 overflow-y-auto text-xs sm:grid-cols-3">
+                {/* Barra con el número al lado: el fondo teñido dejaba el texto
+                    del mismo color que el relleno y no se leía. */}
+                <div className="grid max-h-40 grid-cols-1 gap-x-4 gap-y-1 overflow-y-auto text-xs sm:grid-cols-2">
                   {(datos.municipios ?? []).map((m) => {
                     const pct = m.total === 0 ? 0 : Math.round((m.capturadas / m.total) * 100)
                     return (
                       <div
                         key={m.municipio}
-                        className="flex items-center justify-between gap-1 rounded px-1.5 py-1"
-                        style={{
-                          background: `color-mix(in oklab, var(--primario) ${Math.min(100, pct)}%, transparent)`,
-                        }}
-                        title={`${m.municipio}: ${m.capturadas} de ${m.total}`}
+                        className="flex items-center gap-2 py-0.5"
+                        title={`${m.municipio}: ${m.capturadas} de ${m.total} casillas`}
                       >
-                        <span className="truncate text-texto">{m.municipio}</span>
-                        <span className="shrink-0 tabular-nums text-texto-tenue">{pct}%</span>
+                        <span className="w-24 shrink-0 truncate text-texto">{m.municipio}</span>
+                        <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-fondo-alt">
+                          <span
+                            className="block h-full rounded-full bg-primario"
+                            style={{ width: `${Math.max(2, pct)}%` }}
+                          />
+                        </span>
+                        <span className="w-9 shrink-0 text-right tabular-nums text-texto">
+                          {pct}%
+                        </span>
                       </div>
                     )
                   })}
