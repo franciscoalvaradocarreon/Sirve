@@ -112,9 +112,34 @@ fi
 ACTAS="/var/lib/docker/volumes/sirve-p_actas/_data"
 
 if [ -x "$OCI" ] && [ -d "$ACTAS" ]; then
-    SUBIDAS=$("$OCI" os object bulk-upload --auth instance_principal \
-                --region "$REGION" --bucket-name "$BUCKET" \
-                --src-dir "$ACTAS" --prefix "sirve/actas/" \
-                --no-overwrite 2>/dev/null | grep -c '"status": "uploaded"' || true)
-    log "Actas nuevas en el bucket: ${SUBIDAS:-0}"
+    # El CLI imprime «Uploaded <archivo>» por cada objeto que sube. Antes se
+    # contaba buscando «"status": "uploaded"», que era el formato del JSON de
+    # una versión anterior: el contador daba cero aunque la subida funcionara,
+    # y eso es peor que no tener contador, porque parece que no pasó nada.
+    SALIDA=$(mktemp)
+    if "$OCI" os object bulk-upload --auth instance_principal \
+            --region "$REGION" --bucket-name "$BUCKET" \
+            --src-dir "$ACTAS" --prefix "sirve/actas/" \
+            --no-overwrite > "$SALIDA" 2>&1; then
+        SUBIDAS=$(grep -c '^Uploaded ' "$SALIDA" || true)
+        log "Actas subidas al bucket: ${SUBIDAS:-0}"
+
+        # Los fallos vienen en el JSON final: si la clave no está vacía, algo
+        # se quedó fuera y hay que verlo en el registro, no adivinarlo.
+        if grep -q '"upload-failures": *{ *}' "$SALIDA"; then
+            log "Sin fallos al subir actas."
+        else
+            log "AVISO: el CLI reportó fallos al subir actas; revisar la salida."
+        fi
+    else
+        log "ERROR: falló la subida de actas; el respaldo local SÍ está."
+    fi
+    rm -f "$SALIDA"
+
+    # Cuánto ocupa el acervo completo en el bucket: el dato que interesa para
+    # saber cuánto falta para el límite.
+    TOTAL_ACTAS=$("$OCI" os object list --auth instance_principal --region "$REGION" \
+                    --bucket-name "$BUCKET" --prefix "sirve/actas/" --all \
+                    --query 'length(data)' 2>/dev/null || echo 0)
+    log "Actas en el bucket: ${TOTAL_ACTAS:-0}"
 fi
