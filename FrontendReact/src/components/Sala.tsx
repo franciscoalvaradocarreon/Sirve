@@ -20,12 +20,25 @@ interface Hora {
   capturas: number
 }
 
+interface Eleccion {
+  id: number
+  nombre: string
+  tipo: string
+  alcance: 'ESTADO' | 'DISTRITO_LOCAL' | 'DISTRITO_FEDERAL' | 'MUNICIPIO'
+}
+
+interface Opcion {
+  id: number
+  nombre: string
+  clave?: string
+}
+
 interface Sala {
   habilitada: boolean
   servidor: string
-  /** Texto que se muestra mientras la sala está apagada. */
   mensaje?: string
   eleccion?: string
+  alcance?: string
   total?: number
   capturadas?: number
   avance?: number
@@ -39,44 +52,89 @@ interface Sala {
 
 const REFRESCO_MS = 30_000
 
+/** Nombre corto para las pestañas, que deben caber en una línea. */
+function etiquetaCorta(nombre: string): string {
+  return nombre
+    .replace(/\s*\d{4}\s*$/, '')
+    .replace('Diputaciones locales', 'Dip. locales')
+    .replace('Diputaciones federales', 'Dip. federales')
+    .replace('Ayuntamientos', 'Ayuntamientos')
+}
+
 /**
  * Sala de resultados: la pantalla pública.
  *
- * Está pensada para verse de lejos, en una pantalla en una sala: números
- * grandes, pocos elementos y ninguna interacción. Se refresca sola cada treinta
- * segundos, porque en una sala nadie va a pulsar nada.
+ * Pensada para verse de lejos, en una pantalla en una sala: números grandes,
+ * pocos elementos y ninguna interacción que estorbe. Se refresca sola cada
+ * treinta segundos.
  *
- * Solo muestra agregados. Ni nombres, ni actas, ni resultados por casilla: lo
- * que se publica se decide en el servidor, no aquí.
+ * Cada elección se mira a su escala. Gobernatura es de todo el estado; las
+ * diputaciones, por distrito; los ayuntamientos, por municipio. Por eso hay una
+ * pestaña por elección y, cuando la elección no es estatal, un combo para
+ * elegir el distrito o el municipio.
+ *
+ * Solo muestra agregados: ni nombres, ni actas, ni resultados por casilla.
  */
 export function Sala() {
   const [parametros, setParametros] = useSearchParams()
   const [datos, setDatos] = useState<Sala | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [elecciones, setElecciones] = useState<{ id: number; nombre: string }[]>([])
+  const [elecciones, setElecciones] = useState<Eleccion[]>([])
+  const [opciones, setOpciones] = useState<Opcion[]>([])
+  const [alcance, setAlcance] = useState<string>('ESTADO')
 
   const idEleccion = Number(parametros.get('id_eleccion')) || null
+  const idAmbito = Number(parametros.get('id_ambito')) || null
 
-  /*
-   * Las elecciones se piden a un endpoint público: el normal exige sesión y en
-   * la sala no hay nadie que entre. Si no viene ninguna en la dirección, se
-   * elige la primera para que la pantalla nunca quede vacía por descuido.
-   */
+  const numero = (n?: number) => (n ?? 0).toLocaleString('es-MX')
+  const hora = (iso?: string | null) =>
+    iso
+      ? new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+      : '—'
+
+  const cambiar = (clave: string, valor: string | null) => {
+    setParametros(
+      (prev) => {
+        if (valor) prev.set(clave, valor)
+        else prev.delete(clave)
+        return prev
+      },
+      { replace: true },
+    )
+  }
+
+  // 1) Las elecciones, para las pestañas. Se elige la primera si no viene ninguna.
   useEffect(() => {
     cliente
-      .get<{ id: number; nombre: string }[]>('/publico/sala/elecciones')
+      .get<Eleccion[]>('/publico/sala/elecciones')
       .then((r) => {
         setElecciones(r.data)
-        if (!idEleccion && r.data.length > 0) {
-          setParametros({ id_eleccion: String(r.data[0].id) }, { replace: true })
-        }
+        if (!idEleccion && r.data.length > 0) cambiar('id_eleccion', String(r.data[0].id))
       })
       .catch(() => {
-        // Sin lista no se puede elegir, pero la sala sigue funcionando.
+        // Sin lista no hay pestañas, pero la sala sigue funcionando.
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // 2) Al cambiar de elección, se piden sus distritos o municipios.
+  useEffect(() => {
+    if (!idEleccion) return
+    cliente
+      .get<{ alcance: string; opciones: Opcion[] }>('/publico/sala/opciones', {
+        params: { id_eleccion: idEleccion },
+      })
+      .then((r) => {
+        setAlcance(r.data.alcance)
+        setOpciones(r.data.opciones ?? [])
+      })
+      .catch(() => {
+        setAlcance('ESTADO')
+        setOpciones([])
+      })
+  }, [idEleccion])
+
+  // 3) Los datos, refrescándose solos.
   useEffect(() => {
     let vigente = true
 
@@ -87,7 +145,7 @@ export function Sala() {
       }
       try {
         const r = await cliente.get<Sala>('/publico/sala', {
-          params: { id_eleccion: idEleccion },
+          params: { id_eleccion: idEleccion, id_ambito: idAmbito ?? undefined },
         })
         if (vigente) {
           setDatos(r.data)
@@ -105,13 +163,7 @@ export function Sala() {
       vigente = false
       window.clearInterval(temporizador)
     }
-  }, [idEleccion])
-
-  const numero = (n?: number) => (n ?? 0).toLocaleString('es-MX')
-  const hora = (iso?: string | null) =>
-    iso
-      ? new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
-      : '—'
+  }, [idEleccion, idAmbito])
 
   // Sin datos todavía: la pantalla debe decirlo, no mostrar ceros que parezcan
   // un conteo real.
@@ -141,31 +193,58 @@ export function Sala() {
   const sinCapturas = (datos.capturadas ?? 0) === 0
   const maxVotos = Math.max(1, ...(datos.resultados ?? []).map((r) => r.porcentaje))
   const maxHora = Math.max(1, ...(datos.porHora ?? []).map((h) => h.capturas))
+  const porPartes = alcance !== 'ESTADO' && opciones.length > 0
 
   return (
-    <div className="min-h-screen bg-fondo px-6 py-6">
+    <div className="min-h-screen bg-fondo px-6 py-4">
       <div className="mx-auto max-w-6xl">
-        {/* Encabezado */}
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-borde pb-3">
+        {/* Pestañas: una por elección. Sustituyen al combo, para que se vea de
+            lejos cuál está puesta y se cambie de un toque. */}
+        <nav className="mb-3 flex flex-wrap gap-1 border-b border-borde">
+          {elecciones.map((e) => {
+            const activa = e.id === idEleccion
+            return (
+              <button
+                key={e.id}
+                onClick={() => {
+                  setParametros({ id_eleccion: String(e.id) }, { replace: true })
+                }}
+                className={`-mb-px rounded-t-lg border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+                  activa
+                    ? 'border-primario text-primario'
+                    : 'border-transparent text-texto-tenue hover:text-texto'
+                }`}
+              >
+                {etiquetaCorta(e.nombre)}
+              </button>
+            )
+          })}
+        </nav>
+
+        <header className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-borde pb-3">
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-3xl font-semibold text-texto">{datos.eleccion}</h1>
-            {elecciones.length > 1 && (
+
+            {/* Solo para elecciones que se miran por partes. */}
+            {porPartes && (
               <select
-                value={idEleccion ?? ''}
-                onChange={(e) =>
-                  setParametros({ id_eleccion: e.target.value }, { replace: true })
-                }
+                value={idAmbito ?? ''}
+                onChange={(e) => cambiar('id_ambito', e.target.value || null)}
                 className="rounded-lg border border-borde bg-superficie px-3 py-1.5 text-sm text-texto"
-                title="Cambiar de elección"
+                title={alcance === 'MUNICIPIO' ? 'Cambiar de municipio' : 'Cambiar de distrito'}
               >
-                {elecciones.map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.nombre}
+                <option value="">
+                  {alcance === 'MUNICIPIO' ? 'Todos los municipios' : 'Todos los distritos'}
+                </option>
+                {opciones.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.clave ? `${o.clave} · ${o.nombre}` : o.nombre}
                   </option>
                 ))}
               </select>
             )}
           </div>
+
           <p className="flex items-center gap-1.5 text-sm text-texto-tenue">
             <Clock size={14} />
             última acta {hora(datos.ultima)}
@@ -182,7 +261,7 @@ export function Sala() {
         ) : (
           <>
             {/* Cifras grandes */}
-            <div className="mb-6 grid gap-4 sm:grid-cols-3">
+            <div className="mb-5 grid gap-4 sm:grid-cols-3">
               <div className="rounded-2xl border border-borde bg-superficie p-6 text-center">
                 <p className="text-6xl font-bold tabular-nums text-primario">{datos.avance}%</p>
                 <p className="mt-1 text-sm uppercase tracking-wide text-texto-tenue">capturado</p>
@@ -206,8 +285,7 @@ export function Sala() {
               </div>
             </div>
 
-            {/* Avance */}
-            <div className="mb-6 h-3 overflow-hidden rounded-full bg-fondo-alt">
+            <div className="mb-5 h-3 overflow-hidden rounded-full bg-fondo-alt">
               <div
                 className="h-full rounded-full bg-primario transition-all duration-700"
                 style={{ width: `${datos.avance ?? 0}%` }}
@@ -215,7 +293,7 @@ export function Sala() {
             </div>
 
             {/* Resultados */}
-            <div className="mb-6 rounded-2xl border border-borde bg-superficie p-6">
+            <div className="mb-4 rounded-2xl border border-borde bg-superficie p-6">
               <div className="mb-4 flex items-baseline justify-between">
                 <h2 className="text-lg font-semibold text-texto">Resultados</h2>
                 <p className="text-sm text-texto-tenue">
@@ -234,9 +312,7 @@ export function Sala() {
                         className="flex h-full items-center justify-end rounded-md bg-primario pr-2 transition-all duration-700"
                         style={{ width: `${Math.max(4, (r.porcentaje / maxVotos) * 100)}%` }}
                       >
-                        <span className="text-xs font-semibold text-white">
-                          {r.porcentaje}%
-                        </span>
+                        <span className="text-xs font-semibold text-white">{r.porcentaje}%</span>
                       </div>
                     </div>
                     <span className="w-20 shrink-0 text-right tabular-nums text-sm text-texto-tenue">
@@ -294,7 +370,7 @@ export function Sala() {
               </div>
             </div>
 
-            <p className="mt-6 text-center text-xs text-texto-tenue">
+            <p className="mt-5 text-center text-xs text-texto-tenue">
               Se actualiza cada 30 segundos · última acta {hora(datos.ultima)}
             </p>
           </>

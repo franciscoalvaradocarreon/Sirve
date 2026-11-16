@@ -1,6 +1,7 @@
 package mx.sirve.controlador;
 
 import mx.sirve.repositorio.AvanceOperacionRepositorio;
+import mx.sirve.repositorio.AvanceOperacionRepositorio.Ambito;
 import mx.sirve.servicio.EleccionServicio;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -36,11 +37,17 @@ public class OperacionControlador {
 
     @GetMapping
     public ResponseEntity<Map<String, Object>> operacion(
-            @RequestParam(name = "id_eleccion") int idEleccion) {
+            @RequestParam(name = "id_eleccion") int idEleccion,
+            @RequestParam(name = "id_ambito", required = false) Integer idAmbito) {
 
         elecciones.exigirQueExista(idEleccion);
 
-        Map<String, Object> totales = consultas.totales(idEleccion);
+        String columna = AvanceOperacionRepositorio.columnaDeAmbito(
+                consultas.tipoEleccion(idEleccion));
+        Ambito ambito = (columna == null || idAmbito == null)
+                ? Ambito.TODO : new Ambito(columna, idAmbito);
+
+        Map<String, Object> totales = consultas.totales(idEleccion, ambito);
         long total = numero(totales.get("total"));
         long capturadas = numero(totales.get("capturadas"));
 
@@ -52,12 +59,12 @@ public class OperacionControlador {
         respuesta.put("conFoto", numero(totales.get("con_foto")));
         respuesta.put("sinCuadrar", numero(totales.get("sin_cuadrar")));
         respuesta.put("ultima", totales.get("ultima"));
-        respuesta.put("municipios", consultas.porMunicipio(idEleccion));
-        respuesta.put("porHora", consultas.porHora(idEleccion));
-        respuesta.put("atrasadas", consultas.seccionesAtrasadas(idEleccion, 12));
-        respuesta.put("descuadradas", consultas.sinCuadrar(idEleccion, 12));
+        respuesta.put("municipios", consultas.porMunicipio(idEleccion, ambito));
+        respuesta.put("porHora", consultas.porHora(idEleccion, ambito));
+        respuesta.put("atrasadas", consultas.seccionesAtrasadas(idEleccion, ambito, 12));
+        respuesta.put("descuadradas", consultas.sinCuadrar(idEleccion, ambito, 12));
 
-        List<Map<String, Object>> filas = consultas.resultados(idEleccion);
+        List<Map<String, Object>> filas = consultas.resultados(idEleccion, ambito);
         long suma = filas.stream().mapToLong(f -> numero(f.get("votos"))).sum();
         respuesta.put("votosTotales", suma);
         respuesta.put("resultados", filas.stream().map(f -> {
