@@ -140,7 +140,8 @@ public class AvanceOperacionRepositorio {
     /** Resultados por opción dentro del ámbito. */
     public List<Map<String, Object>> resultados(int idEleccion, Ambito ambito) {
         return jdbc.queryForList("""
-                SELECT o.etiqueta,
+                SELECT o.id AS id_opcion,
+                       o.etiqueta,
                        coalesce(o.color, '#546E7A') AS color,
                        sum(cv.votos) AS votos
                   FROM sirve.captura c

@@ -18,7 +18,11 @@ import java.util.Optional;
 public class PartidoRepositorio {
 
     public record Partido(int id, String clave, String nombre, String color,
-                          short orden, boolean activo) {
+                          short orden, boolean activo, boolean tieneLogo) {
+    }
+
+    /** Bytes y tipo del logo, para servirlo. */
+    public record Logo(byte[] datos, String tipo) {
     }
 
     private final JdbcTemplate jdbc;
@@ -33,11 +37,12 @@ public class PartidoRepositorio {
             rs.getString("nombre"),
             rs.getString("color"),
             rs.getShort("orden"),
-            rs.getBoolean("activo"));
+            rs.getBoolean("activo"),
+            rs.getBytes("logo") != null);
 
     public List<Partido> listar() {
         return jdbc.query("""
-                SELECT id, clave, nombre, color, orden, activo
+                SELECT id, clave, nombre, color, orden, activo, logo, logo_tipo
                   FROM sirve.partido
                  ORDER BY orden, clave
                 """, FILA);
@@ -45,7 +50,7 @@ public class PartidoRepositorio {
 
     public Optional<Partido> buscar(int id) {
         return jdbc.query("""
-                SELECT id, clave, nombre, color, orden, activo
+                SELECT id, clave, nombre, color, orden, activo, logo, logo_tipo
                   FROM sirve.partido WHERE id = ?
                 """, FILA, id).stream().findFirst();
     }
@@ -85,5 +90,43 @@ public class PartidoRepositorio {
                 UPDATE sirve.opcion_boleta SET color = ?
                  WHERE id_partido = ?
                 """, color, idPartido);
+    }
+    /** Logo del partido, o vacío si no tiene. */
+    public Optional<Logo> logo(int id) {
+        return jdbc.query("""
+                SELECT logo, logo_tipo FROM sirve.partido WHERE id = ?
+                """, (rs, n) -> new Logo(rs.getBytes("logo"), rs.getString("logo_tipo")), id)
+                .stream().filter(l -> l.datos() != null).findFirst();
+    }
+
+    public void guardarLogo(int id, byte[] datos, String tipo) {
+        jdbc.update("UPDATE sirve.partido SET logo = ?, logo_tipo = ? WHERE id = ?",
+                datos, tipo, id);
+    }
+
+    public void borrarLogo(int id) {
+        jdbc.update("UPDATE sirve.partido SET logo = NULL, logo_tipo = NULL WHERE id = ?", id);
+    }
+
+    /**
+     * Copia el logo del partido a sus boletas.
+     *
+     * Solo donde la boleta no tiene logo: si alguien puso uno distinto en una
+     * elección, se respeta. Al revés que el color, aquí no se pisa nada.
+     */
+    public void propagarLogo(int idPartido, byte[] datos, String tipo) {
+        jdbc.update("""
+                UPDATE sirve.opcion_boleta
+                   SET logo = ?, logo_tipo = ?
+                 WHERE id_partido = ? AND logo IS NULL
+                """, datos, tipo, idPartido);
+    }
+
+    /** Logo de una opción de boleta, para la pantalla pública. */
+    public Optional<Logo> logoDeOpcion(int idOpcion) {
+        return jdbc.query("""
+                SELECT logo, logo_tipo FROM sirve.opcion_boleta WHERE id = ?
+                """, (rs, n) -> new Logo(rs.getBytes("logo"), rs.getString("logo_tipo")), idOpcion)
+                .stream().filter(l -> l.datos() != null).findFirst();
     }
 }

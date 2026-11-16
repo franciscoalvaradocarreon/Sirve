@@ -8,12 +8,17 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.RestController;
 
+import org.springframework.http.MediaType;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
@@ -136,5 +141,58 @@ public class PartidoControlador {
                     "El color debe ser un hexadecimal de seis dígitos, por ejemplo #0D47A1.");
         }
         return limpio.toUpperCase();
+    }
+    /* ------------------------------------------------------------------
+     * Logo
+     * ------------------------------------------------------------------ */
+
+    /** Tope del archivo. Los logos son pequeños; uno de un mega ya es exceso. */
+    private static final long LOGO_MAXIMO = 512 * 1024;
+
+    @PostMapping(path = "/{id}/logo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> subirLogo(@PathVariable int id,
+                                       @RequestParam("archivo") MultipartFile archivo) {
+
+        partidos.buscar(id).orElseThrow(() -> new NoEncontradoExcepcion("NO_ENCONTRADO",
+                "No existe el partido " + id));
+
+        if (archivo == null || archivo.isEmpty()) {
+            throw new DatosInvalidosExcepcion("El archivo está vacío.");
+        }
+        if (archivo.getSize() > LOGO_MAXIMO) {
+            throw new DatosInvalidosExcepcion("El logo no debe pasar de 512 KB.");
+        }
+
+        String tipo = archivo.getContentType();
+        if (tipo == null || !tipo.startsWith("image/")) {
+            throw new DatosInvalidosExcepcion("El logo debe ser una imagen.");
+        }
+
+        try {
+            byte[] datos = archivo.getBytes();
+            partidos.guardarLogo(id, datos, tipo);
+            partidos.propagarLogo(id, datos, tipo);
+        } catch (java.io.IOException e) {
+            throw new DatosInvalidosExcepcion("No se pudo leer el archivo.");
+        }
+
+        return ResponseEntity.ok(Map.of("tieneLogo", true));
+    }
+
+    @GetMapping("/{id}/logo")
+    public ResponseEntity<byte[]> logo(@PathVariable int id) {
+        return partidos.logo(id)
+                .map(l -> ResponseEntity.ok()
+                        .contentType(MediaType.parseMediaType(l.tipo()))
+                        .cacheControl(org.springframework.http.CacheControl
+                                .maxAge(java.time.Duration.ofMinutes(10)).cachePublic())
+                        .body(l.datos()))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}/logo")
+    public ResponseEntity<Void> borrarLogo(@PathVariable int id) {
+        partidos.borrarLogo(id);
+        return ResponseEntity.noContent().build();
     }
 }

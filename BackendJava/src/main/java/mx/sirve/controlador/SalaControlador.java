@@ -123,6 +123,7 @@ public class SalaControlador {
         respuesta.put("resultados", filas.stream().map(f -> {
             Map<String, Object> r = new LinkedHashMap<>();
             long votos = numero(f.get("votos"));
+            r.put("idOpcion", f.get("id_opcion"));
             r.put("etiqueta", f.get("etiqueta"));
             r.put("color", f.get("color"));
             r.put("votos", votos);

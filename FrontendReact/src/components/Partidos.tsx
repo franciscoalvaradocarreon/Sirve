@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Check, Plus, Save } from 'lucide-react'
+import { Check, ImagePlus, Plus, Save, Trash2 } from 'lucide-react'
 import { cliente } from '../api/cliente'
 
 interface Partido {
@@ -9,6 +9,46 @@ interface Partido {
   color: string | null
   orden: number
   activo: boolean
+  tiene_logo: boolean
+}
+
+/**
+ * Logo del partido.
+ *
+ * La ruta del logo pide el token en una cabecera, y una etiqueta img no manda
+ * cabeceras: por eso se descarga con el cliente de siempre y se muestra desde
+ * una dirección temporal del navegador.
+ */
+function LogoPartido({ id, version }: { id: number; version: number }) {
+  const [url, setUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    let vigente = true
+    setUrl(null)
+
+    cliente
+      .get<Blob>(`/catalogos/partidos/${id}/logo`, { responseType: 'blob', timeout: 15000 })
+      .then((r) => {
+        if (vigente) setUrl(URL.createObjectURL(r.data))
+      })
+      .catch(() => {
+        // Sin logo no es un error: el partido simplemente no tiene.
+      })
+
+    return () => {
+      vigente = false
+    }
+  }, [id, version])
+
+  if (!url) {
+    return (
+      <div className="flex h-10 w-10 items-center justify-center rounded border border-dashed border-borde text-texto-tenue">
+        <ImagePlus size={16} />
+      </div>
+    )
+  }
+
+  return <img src={url} alt="Logo" className="h-10 w-10 rounded border border-borde object-contain" />
 }
 
 /**
@@ -25,6 +65,8 @@ export function Partidos() {
   const [guardando, setGuardando] = useState<number | null>(null)
   const [guardado, setGuardado] = useState<number | null>(null)
   const [creando, setCreando] = useState(false)
+  // Sube cuando cambia un logo, para que la vista previa se vuelva a pedir.
+  const [versionLogo, setVersionLogo] = useState<Record<number, number>>({})
   const [nuevo, setNuevo] = useState({ clave: '', nombre: '', color: '#546E7A' })
 
   const cargar = () =>
@@ -58,6 +100,38 @@ export function Partidos() {
       setError(e instanceof Error ? e.message : 'No se pudo guardar')
     } finally {
       setGuardando(null)
+    }
+  }
+
+  /** Sube el logo y refresca la vista previa. */
+  async function subirLogo(id: number, archivo: File) {
+    setError(null)
+    if (archivo.size > 512 * 1024) {
+      setError('El logo no debe pasar de 512 KB.')
+      return
+    }
+    try {
+      const datos = new FormData()
+      datos.append('archivo', archivo)
+      await cliente.post(`/catalogos/partidos/${id}/logo`, datos, {
+        headers: { 'Content-Type': undefined },
+        timeout: 30000,
+      })
+      setVersionLogo((prev) => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }))
+      setPartidos((prev) => prev.map((p) => (p.id === id ? { ...p, tiene_logo: true } : p)))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo subir el logo')
+    }
+  }
+
+  async function quitarLogo(id: number) {
+    setError(null)
+    try {
+      await cliente.delete(`/catalogos/partidos/${id}/logo`)
+      setVersionLogo((prev) => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }))
+      setPartidos((prev) => prev.map((p) => (p.id === id ? { ...p, tiene_logo: false } : p)))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo quitar el logo')
     }
   }
 
@@ -142,6 +216,7 @@ export function Partidos() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-borde bg-fondo-alt text-left text-xs uppercase tracking-wide text-texto-tenue">
+              <th className="px-3 py-2 font-medium">Logo</th>
               <th className="px-3 py-2 font-medium">Color</th>
               <th className="px-3 py-2 font-medium">Clave</th>
               <th className="px-3 py-2 font-medium">Nombre</th>
@@ -153,6 +228,38 @@ export function Partidos() {
           <tbody>
             {partidos.map((p) => (
               <tr key={p.id} className="border-b border-borde-tenue last:border-0">
+                <td className="px-3 py-2">
+                  <div className="flex items-center gap-1.5">
+                    <LogoPartido id={p.id} version={versionLogo[p.id] ?? 0} />
+                    <div className="flex flex-col gap-0.5">
+                      <label
+                        className="cursor-pointer rounded border border-borde px-1.5 py-0.5 text-[10px] text-texto-tenue hover:text-primario"
+                        title="Subir o cambiar el logo"
+                      >
+                        {p.tiene_logo ? 'Cambiar' : 'Subir'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const archivo = e.target.files?.[0]
+                            if (archivo) void subirLogo(p.id, archivo)
+                            e.target.value = ''
+                          }}
+                        />
+                      </label>
+                      {p.tiene_logo && (
+                        <button
+                          onClick={() => void quitarLogo(p.id)}
+                          className="rounded px-1.5 py-0.5 text-[10px] text-texto-tenue hover:text-red-600"
+                          title="Quitar el logo"
+                        >
+                          <Trash2 size={10} className="inline" /> Quitar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </td>
                 <td className="px-3 py-2">
                   <input
                     type="color"
