@@ -23,8 +23,18 @@
 
 DO $$
 DECLARE
-    -- Elección de origen: Diputaciones federales 2024.
-    v_origen   int := 6;
+    /*
+     * Elección de origen. NULL = la que se elija sola.
+     *
+     * En producción es Diputaciones federales 2024, que tiene todas sus
+     * casillas capturadas. En desarrollo esa elección no existe, así que el
+     * número fijo no servía: el 6 allá es «Diputaciones locales 2027».
+     *
+     * Se toma la elección del año más reciente que tenga al menos 90 % de sus
+     * casillas capturadas. Si en tu base hay otra que te sirva mejor, pon su
+     * número aquí.
+     */
+    v_origen   int := NULL;
     -- Elecciones a llenar. NULL = todas las del proceso activo, salvo el
     -- origen. Así el mismo script sirve para una elección concreta o para
     -- todas, sin editarlo.
@@ -57,6 +67,29 @@ DECLARE
     v_hechas   int;
     v_sin_origen int;
 BEGIN
+    -- Origen automático: la elección más reciente que esté prácticamente
+    -- completa. Es la que tiene datos que valga la pena copiar.
+    IF v_origen IS NULL THEN
+        SELECT e.id INTO v_origen
+          FROM sirve.eleccion e
+          JOIN sirve.proceso_electoral p ON p.id = e.id_proceso
+         WHERE (SELECT count(*) FROM sirve.casilla_eleccion ce WHERE ce.id_eleccion = e.id) > 0
+           AND (SELECT count(*) FROM sirve.captura c
+                 WHERE c.id_eleccion = e.id AND c.estado = 'VIGENTE')::numeric
+               / (SELECT count(*) FROM sirve.casilla_eleccion ce WHERE ce.id_eleccion = e.id) >= 0.9
+         ORDER BY p.anio DESC,
+                  (SELECT count(*) FROM sirve.captura c
+                    WHERE c.id_eleccion = e.id AND c.estado = 'VIGENTE') DESC
+         LIMIT 1;
+    END IF;
+
+    IF v_origen IS NULL THEN
+        RAISE EXCEPTION 'No hay ninguna elección completa que sirva de origen';
+    END IF;
+
+    RAISE NOTICE 'Origen: % — %',
+        v_origen, (SELECT nombre FROM sirve.eleccion WHERE id = v_origen);
+
     -- Si no se indicaron destinos, se toman TODAS las elecciones menos la de
     -- origen, sin importar de qué proceso sean: las de 2021 y 2024 también
     -- necesitan datos para que la pantalla no muestre ceros.
