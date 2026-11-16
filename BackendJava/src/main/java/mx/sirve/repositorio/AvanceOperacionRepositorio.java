@@ -150,7 +150,7 @@ public class AvanceOperacionRepositorio {
                   JOIN sirve.captura_voto cv ON cv.id_captura = c.id
                   JOIN sirve.opcion_boleta o  ON o.id = cv.id_opcion
                  WHERE c.id_eleccion = ? AND c.estado = 'VIGENTE'%s
-                 GROUP BY o.etiqueta, o.orden
+                 GROUP BY o.id, o.etiqueta, o.color, o.orden
                  ORDER BY votos DESC, o.orden
                 """.formatted(ambito.filtro()), idEleccion);
     }
