@@ -124,6 +124,7 @@ public class SalaControlador {
             Map<String, Object> r = new LinkedHashMap<>();
             long votos = numero(f.get("votos"));
             r.put("etiqueta", f.get("etiqueta"));
+            r.put("color", f.get("color"));
             r.put("votos", votos);
             r.put("porcentaje", suma == 0 ? 0 : Math.round(votos * 1000.0 / suma) / 10.0);
             return r;

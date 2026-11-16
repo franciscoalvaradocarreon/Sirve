@@ -5,6 +5,7 @@ import { cliente } from '../api/cliente'
 
 interface Resultado {
   etiqueta: string
+  color: string
   votos: number
   porcentaje: number
 }
@@ -304,13 +305,22 @@ export function Sala() {
               <div className="space-y-3">
                 {(datos.resultados ?? []).map((r) => (
                   <div key={r.etiqueta} className="flex items-center gap-4">
-                    <span className="w-28 shrink-0 truncate text-right text-sm font-medium text-texto">
-                      {r.etiqueta}
+                    <span className="flex w-28 shrink-0 items-center justify-end gap-1.5">
+                      {/* El color del partido, como en la boleta. */}
+                      <span
+                        className="h-3 w-3 shrink-0 rounded-sm"
+                        style={{ background: r.color }}
+                        aria-hidden
+                      />
+                      <span className="truncate text-sm font-medium text-texto">{r.etiqueta}</span>
                     </span>
                     <div className="h-8 flex-1 overflow-hidden rounded-md bg-fondo-alt">
                       <div
-                        className="flex h-full items-center justify-end rounded-md bg-primario pr-2 transition-all duration-700"
-                        style={{ width: `${Math.max(4, (r.porcentaje / maxVotos) * 100)}%` }}
+                        className="flex h-full items-center justify-end rounded-md pr-2 transition-all duration-700"
+                        style={{
+                          width: `${Math.max(4, (r.porcentaje / maxVotos) * 100)}%`,
+                          background: r.color,
+                        }}
                       >
                         <span className="text-xs font-semibold text-white">{r.porcentaje}%</span>
                       </div>
