@@ -158,9 +158,10 @@ export function Coaliciones() {
             <thead>
               <tr className="border-b border-borde bg-fondo-alt text-left text-xs uppercase tracking-wide text-texto-tenue">
                 <th className="px-3 py-2 font-medium">Logo</th>
-                <th className="px-3 py-2 font-medium">Clave</th>
-                <th className="px-3 py-2 font-medium">Integrantes</th>
                 <th className="px-3 py-2 font-medium">Color</th>
+                <th className="px-3 py-2 font-medium">Clave</th>
+                <th className="px-3 py-2 font-medium">Nombre</th>
+                <th className="px-3 py-2 font-medium">Integrantes</th>
                 <th className="px-3 py-2 font-medium">Activa</th>
                 <th className="px-3 py-2" />
               </tr>
@@ -201,12 +202,6 @@ export function Coaliciones() {
                     </div>
                   </td>
 
-                  <td className="px-3 py-2 font-mono text-xs text-texto">{c.clave}</td>
-
-                  <td className="px-3 py-2 text-xs text-texto-tenue">
-                    {c.integrantes || '—'}
-                  </td>
-
                   <td className="px-3 py-2">
                     <input
                       type="color"
@@ -215,6 +210,20 @@ export function Coaliciones() {
                       className="h-8 w-12 cursor-pointer rounded border border-borde bg-superficie"
                       title="Color de la coalición"
                     />
+                  </td>
+
+                  <td className="px-3 py-2 font-mono text-xs text-texto">{c.clave}</td>
+
+                  <td className="px-3 py-2">
+                    <input
+                      value={c.nombre}
+                      onChange={(e) => editar(c.id, { nombre: e.target.value })}
+                      className="w-full rounded border border-transparent bg-transparent px-1 py-0.5 text-texto hover:border-borde focus:border-borde focus:bg-superficie"
+                    />
+                  </td>
+
+                  <td className="px-3 py-2 text-xs text-texto-tenue">
+                    {c.integrantes || '—'}
                   </td>
 
                   <td className="px-3 py-2">
