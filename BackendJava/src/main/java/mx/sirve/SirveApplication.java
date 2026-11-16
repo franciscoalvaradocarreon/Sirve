@@ -2,6 +2,7 @@ package mx.sirve;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Punto de entrada de SIRVE-P.
@@ -11,6 +12,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * contenedor, un solo origen, sin CORS que coordinar en producción.
  */
 @SpringBootApplication
+@EnableScheduling
 public class SirveApplication {
 
     public static void main(String[] args) {

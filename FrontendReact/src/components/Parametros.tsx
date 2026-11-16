@@ -156,6 +156,82 @@ export function Parametros() {
         </label>
       </section>
 
+      {/* Aviso de disco */}
+      <section className="mb-4 rounded-xl border border-borde bg-superficie p-5">
+        <h2 className="text-sm font-semibold text-texto">Aviso de disco</h2>
+        <p className="mt-1 text-xs text-texto-tenue">
+          Si el disco se llena, la base deja de escribir y la captura se detiene sin avisar en
+          pantalla. Aquí se decide cuándo empieza a avisar y a dónde manda el aviso.
+        </p>
+
+        <div className="mt-3 space-y-2">
+          <label className="flex items-center gap-2 text-xs text-texto-tenue">
+            <span className="flex-1">Avisar cuando el disco pase de</span>
+            <input
+              type="number"
+              min={50}
+              max={99}
+              value={valores['disco.umbral'] ?? '80'}
+              onChange={(e) =>
+                setValores((prev) => ({ ...prev, 'disco.umbral': e.target.value }))
+              }
+              className={campo}
+            />
+            %
+            <button
+              onClick={() => void guardar('disco.umbral', valores['disco.umbral'] ?? '80')}
+              className="rounded-lg border border-borde px-3 py-1.5 hover:text-primario"
+            >
+              {guardado === 'disco.umbral' ? <Check size={14} /> : 'Guardar'}
+            </button>
+          </label>
+
+          <label className="block text-xs text-texto-tenue">
+            Dirección del webhook (bot de Telegram o servicio propio)
+            <div className="mt-1 flex gap-2">
+              <input
+                value={valores['alerta.webhook'] ?? ''}
+                onChange={(e) =>
+                  setValores((prev) => ({ ...prev, 'alerta.webhook': e.target.value }))
+                }
+                placeholder="https://api.telegram.org/bot<token>/sendMessage"
+                className="flex-1 rounded-lg border border-borde bg-superficie px-3 py-1.5 text-sm text-texto"
+              />
+              <button
+                onClick={() =>
+                  void guardar('alerta.webhook', valores['alerta.webhook'] ?? '')
+                }
+                className="rounded-lg border border-borde px-3 py-1.5 text-xs hover:text-primario"
+              >
+                {guardado === 'alerta.webhook' ? <Check size={14} /> : 'Guardar'}
+              </button>
+            </div>
+            <span className="mt-1 block text-[11px] text-texto-tenue">
+              Vacío: el aviso solo queda en el registro del servidor. El banner de la pantalla
+              funciona aunque no haya webhook.
+            </span>
+          </label>
+
+          <label className="flex items-center gap-2 text-xs text-texto-tenue">
+            <span className="flex-1">Chat de Telegram (solo si es un bot)</span>
+            <input
+              value={valores['alerta.chat'] ?? ''}
+              onChange={(e) =>
+                setValores((prev) => ({ ...prev, 'alerta.chat': e.target.value }))
+              }
+              placeholder="-1001234567890"
+              className="w-44 rounded-lg border border-borde bg-superficie px-3 py-1.5 text-sm text-texto"
+            />
+            <button
+              onClick={() => void guardar('alerta.chat', valores['alerta.chat'] ?? '')}
+              className="rounded-lg border border-borde px-3 py-1.5 hover:text-primario"
+            >
+              {guardado === 'alerta.chat' ? <Check size={14} /> : 'Guardar'}
+            </button>
+          </label>
+        </div>
+      </section>
+
       {/* Límites */}
       <section className="rounded-xl border border-borde bg-superficie p-5">
         <h2 className="text-sm font-semibold text-texto">Límites de peticiones</h2>
