@@ -28,6 +28,7 @@ import { Sala } from './components/Sala'
 import { Operacion } from './components/Operacion'
 import { Parametros } from './components/Parametros'
 import { Partidos } from './components/Partidos'
+import { Coaliciones } from './components/Coaliciones'
 
 /** Deja pasar solo con sesión iniciada; si no, manda al login. */
 function RutaPrivada({ children }: { children: React.ReactNode }) {
@@ -68,6 +69,7 @@ export default function App() {
             <Route path="/usuarios/menus" element={<UsuariosMenus />} />
             <Route path="/parametros" element={<Parametros />} />
             <Route path="/catalogos/partidos" element={<Partidos />} />
+            <Route path="/catalogos/coaliciones" element={<Coaliciones />} />
           </Route>
 
           {/* Teléfono y tableta: árbol propio, sin menú lateral, con
