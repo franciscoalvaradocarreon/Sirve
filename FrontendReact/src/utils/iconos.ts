@@ -1,7 +1,7 @@
 import {
   Home, Library, Calendar, Vote, MapPin, Map, Hash, PencilLine, ClipboardList,
   ListChecks, Users, UserCog, ShieldCheck, BarChart3, ChartColumn, ListTree,
-  Images, Gauge, Settings, Circle,
+  Images, Gauge, Settings, Palette, Circle,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -15,7 +15,7 @@ import type { LucideIcon } from 'lucide-react'
 const ICONOS: Record<string, LucideIcon> = {
   Home, Library, Calendar, Vote, MapPin, Map, Hash, PencilLine, ClipboardList,
   ListChecks, Users, UserCog, ShieldCheck, BarChart3, ChartColumn, ListTree, Images,
-  Gauge, Settings,
+  Gauge, Settings, Palette,
 }
 
 export const iconoPorNombre = (nombre: string | null): LucideIcon =>
