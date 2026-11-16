@@ -205,4 +205,44 @@ public class BoletaRepositorio {
                 (rs, n) -> new Logo(rs.getBytes("logo"), rs.getString("logo_tipo")), idOpcion)
                 .stream().filter(l -> l.datos() != null).findFirst();
     }
+    /**
+     * Mueve una opción una posición arriba o abajo.
+     *
+     * Se intercambia con su vecina. El orden es único por elección, así que el
+     * intercambio no se puede hacer en dos pasos: la primera actualización
+     * chocaría con la segunda. Se pasa por un valor temporal, dentro de la
+     * misma transacción.
+     *
+     * @return cierto si se movió; falso si ya estaba en el extremo
+     */
+    public boolean mover(int id, boolean arriba) {
+        Map<String, Object> actual = jdbc.queryForMap(
+                "SELECT id, id_eleccion, orden FROM sirve.opcion_boleta WHERE id = ?", id);
+
+        int idEleccion = ((Number) actual.get("id_eleccion")).intValue();
+        int orden = ((Number) actual.get("orden")).intValue();
+
+        List<Map<String, Object>> vecina = jdbc.queryForList(arriba
+                ? """
+                  SELECT id, orden FROM sirve.opcion_boleta
+                   WHERE id_eleccion = ? AND orden < ?
+                   ORDER BY orden DESC LIMIT 1
+                  """
+                : """
+                  SELECT id, orden FROM sirve.opcion_boleta
+                   WHERE id_eleccion = ? AND orden > ?
+                   ORDER BY orden ASC LIMIT 1
+                  """, idEleccion, orden);
+
+        if (vecina.isEmpty()) return false;
+
+        int idVecina = ((Number) vecina.get(0).get("id")).intValue();
+        int ordenVecina = ((Number) vecina.get(0).get("orden")).intValue();
+
+        // Valor temporal fuera de cualquier rango real, para no chocar.
+        jdbc.update("UPDATE sirve.opcion_boleta SET orden = -1 WHERE id = ?", id);
+        jdbc.update("UPDATE sirve.opcion_boleta SET orden = ? WHERE id = ?", orden, idVecina);
+        jdbc.update("UPDATE sirve.opcion_boleta SET orden = ? WHERE id = ?", ordenVecina, id);
+        return true;
+    }
 }

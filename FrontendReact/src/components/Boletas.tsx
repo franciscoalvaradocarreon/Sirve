@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Check, ImagePlus, Plus, Save, Trash2 } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, ImagePlus, Plus, Save, Trash2 } from 'lucide-react'
 import { cliente } from '../api/cliente'
 
 interface Eleccion {
@@ -136,7 +136,6 @@ export function Boletas() {
       await cliente.put(`/catalogos/boletas/opcion/${o.id}`, {
         etiqueta: o.etiqueta,
         color: o.color,
-        orden: o.orden,
         activo: o.activo,
       })
       setGuardado(o.id)
@@ -145,6 +144,17 @@ export function Boletas() {
       setError(e instanceof Error ? e.message : 'No se pudo guardar')
     } finally {
       setGuardando(null)
+    }
+  }
+
+  /** Sube o baja una posición, intercambiando con la vecina. */
+  async function mover(o: Opcion, arriba: boolean) {
+    setError(null)
+    try {
+      await cliente.post(`/catalogos/boletas/opcion/${o.id}/mover`, { arriba })
+      if (elegida) await cargarBoleta(elegida)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo mover')
     }
   }
 
@@ -183,7 +193,7 @@ export function Boletas() {
     if (!elegida || idPartido === '') return
     setError(null)
     try {
-      await cliente.post(`/catalogos/boletas/${elegida}/partido`, { idPartido })
+      await cliente.post(`/catalogos/boletas/${elegida}/partido`, { id_partido: idPartido })
       setAgregandoPartido(false)
       setIdPartido('')
       await cargarBoleta(elegida)
@@ -199,7 +209,7 @@ export function Boletas() {
       await cliente.post(`/catalogos/boletas/${elegida}/coalicion`, {
         clave: coalicion.clave,
         color: coalicion.color,
-        idPartidos: integrantes,
+        id_partidos: integrantes,
       })
       setArmandoCoalicion(false)
       setCoalicion({ clave: '', color: '#1A237E' })
@@ -406,13 +416,26 @@ export function Boletas() {
                   </div>
                 </td>
 
-                <td className="px-3 py-2">
-                  <input
-                    type="number"
-                    value={o.orden}
-                    onChange={(e) => editar(o.id, { orden: Number(e.target.value) })}
-                    className="w-14 rounded border border-borde bg-superficie px-1.5 py-1 text-xs text-texto"
-                  />
+                {/* El orden no se escribe: se mueve con flechas. Escribir el
+                    número choca con la restricción de orden único. */}
+                <td className="whitespace-nowrap px-3 py-2">
+                  <span className="mr-1 inline-block w-5 text-right text-xs tabular-nums text-texto-tenue">
+                    {o.orden}
+                  </span>
+                  <button
+                    onClick={() => void mover(o, true)}
+                    className="rounded p-0.5 text-texto-tenue hover:text-primario"
+                    title="Subir"
+                  >
+                    <ChevronUp size={14} />
+                  </button>
+                  <button
+                    onClick={() => void mover(o, false)}
+                    className="rounded p-0.5 text-texto-tenue hover:text-primario"
+                    title="Bajar"
+                  >
+                    <ChevronDown size={14} />
+                  </button>
                 </td>
 
                 <td className="px-3 py-2">

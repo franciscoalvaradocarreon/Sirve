@@ -160,6 +160,25 @@ public class BoletaControlador {
     }
 
     /**
+     * Sube o baja una opción una posición.
+     *
+     * La pantalla no edita el número a mano: intercambiar posiciones con un
+     * campo de texto choca con el orden único, y el usuario ve un error de base
+     * datos que no puede resolver.
+     */
+    @PostMapping("/opcion/{id}/mover")
+    @org.springframework.transaction.annotation.Transactional
+    public ResponseEntity<Map<String, Object>> mover(
+            @PathVariable int id, @RequestBody Map<String, Boolean> datos) {
+
+        boletas.buscar(id).orElseThrow(() -> new NoEncontradoExcepcion("NO_ENCONTRADO",
+                "No existe la opción " + id));
+
+        boolean arriba = Boolean.TRUE.equals(datos.get("arriba"));
+        return ResponseEntity.ok(Map.of("movida", boletas.mover(id, arriba)));
+    }
+
+    /**
      * Quita una opción de la boleta.
      *
      * Solo si no tiene votos. Con votos, el camino es desactivarla: la captura
