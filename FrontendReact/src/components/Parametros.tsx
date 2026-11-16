@@ -186,6 +186,19 @@ export function Parametros() {
             </button>
           </label>
 
+          <label className="flex items-center gap-2 text-xs text-texto-tenue">
+            <span className="flex-1">Mostrar la franja de aviso en la aplicación</span>
+            <input
+              type="checkbox"
+              checked={valores['disco.aviso.pantalla'] === 'true'}
+              onChange={(e) =>
+                void guardar('disco.aviso.pantalla', e.target.checked ? 'true' : 'false')
+              }
+              className="h-4 w-4 cursor-pointer"
+            />
+            {guardado === 'disco.aviso.pantalla' && <Check size={14} className="text-primario" />}
+          </label>
+
           <label className="block text-xs text-texto-tenue">
             Correos que reciben el aviso (separados por comas)
             <div className="mt-1 flex gap-2">

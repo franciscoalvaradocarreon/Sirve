@@ -56,6 +56,8 @@ public class DiscoServicio {
     public Map<String, Object> estado() {
         Map<String, Object> datos = new LinkedHashMap<>(medir());
         datos.put("umbral", umbral());
+        // La franja en pantalla es opcional: el aviso puede ir solo por correo.
+        datos.put("avisoPantalla", parametros.booleano("disco.aviso.pantalla", false));
         datos.put("aviso", (boolean) datos.getOrDefault("alerta", false)
                 ? "El disco está por llenarse. Libera espacio o amplía el volumen."
                 : null);

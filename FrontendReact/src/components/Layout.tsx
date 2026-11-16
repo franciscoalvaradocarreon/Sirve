@@ -11,6 +11,7 @@ interface Disco {
   totalLegible: string
   umbral: number
   alerta: boolean
+  avisoPantalla: boolean
   aviso: string | null
 }
 
@@ -18,10 +19,9 @@ interface Disco {
  * Armazón de la aplicación: menú a la izquierda, contenido a la derecha y una
  * barra superior con el conmutador de tema.
  *
- * Arriba del contenido va el aviso de disco. Si el disco se llena, PostgreSQL
- * deja de escribir y la captura se detiene sin decir por qué; verlo en pantalla
- * es la diferencia entre actuar a tiempo y descubrirlo con los capturistas
- * esperando.
+ * Arriba del contenido puede ir el aviso de disco, pero solo si está encendido
+ * en Parámetros: por omisión va por correo. Cuando se enciende, la franja avisa
+ * de que el disco se está llenando antes de que la captura deje de guardar.
  */
 export function Layout() {
   const { tema, alternar } = useTema()
@@ -73,7 +73,7 @@ export function Layout() {
           </button>
         </header>
 
-        {disco?.alerta && (
+        {disco?.alerta && disco.avisoPantalla && (
           <div
             className="flex items-center gap-2 border-b border-amber-300 bg-amber-50 px-6 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200"
             role="alert"
