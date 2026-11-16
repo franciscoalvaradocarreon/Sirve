@@ -39,6 +39,7 @@ public class DiscoServicio {
     private static final Duration ESPERA_ENTRE_AVISOS = Duration.ofHours(6);
 
     private final ParametrosServicio parametros;
+    private final CorreoServicio correo;
 
     @Value("${app.actas.ruta:/datos/actas}")
     private String rutaActas;
@@ -46,8 +47,9 @@ public class DiscoServicio {
     private OffsetDateTime ultimoAviso = OffsetDateTime.MIN;
     private Map<String, Object> ultimoEstado = Map.of();
 
-    public DiscoServicio(ParametrosServicio parametros) {
+    public DiscoServicio(ParametrosServicio parametros, CorreoServicio correo) {
         this.parametros = parametros;
+        this.correo = correo;
     }
 
     /** Estado del disco: lo que se muestra en pantalla y lo que se vigila. */
@@ -122,14 +124,23 @@ public class DiscoServicio {
      * configurado, solo queda el registro del servidor.
      */
     private boolean enviarAviso(Map<String, Object> datos) {
-        String webhook = parametros.texto("alerta.webhook", "").trim();
-        if (webhook.isEmpty()) {
-            log.warn("Disco lleno y sin webhook configurado: revisa 'alerta.webhook' en Parámetros.");
-            return false;
-        }
-
         String texto = "SIRVE-P · disco al %s %% (%s libres de %s)."
                 .formatted(datos.get("porcentaje"), datos.get("libreLegible"), datos.get("totalLegible"));
+
+        // Dos canales: el correo queda como registro y el webhook como urgencia.
+        // Basta con que uno funcione para dar el aviso por enviado.
+        boolean enviado = correo.enviar(
+                parametros.texto("alerta.correo", ""),
+                "Disco al " + datos.get("porcentaje") + " %",
+                texto + "\n\nSi el disco se llena, la base deja de escribir y la captura se detiene.\n");
+
+        String webhook = parametros.texto("alerta.webhook", "").trim();
+        if (webhook.isEmpty()) {
+            if (!enviado) {
+                log.warn("Disco lleno y sin webhook ni correo configurado: revisa Parámetros.");
+            }
+            return enviado;
+        }
 
         try {
             // Telegram espera {"chat_id": "...", "text": "..."}; un webhook
@@ -150,14 +161,14 @@ public class DiscoServicio {
                     .send(peticion, HttpResponse.BodyHandlers.ofString());
 
             if (respuesta.statusCode() / 100 == 2) {
-                log.info("Aviso de disco enviado ({}).", respuesta.statusCode());
+                log.info("Aviso de disco enviado por webhook ({}).", respuesta.statusCode());
                 return true;
             }
             log.warn("El webhook respondió {}: {}", respuesta.statusCode(), respuesta.body());
         } catch (Exception e) {
-            log.warn("No se pudo enviar el aviso de disco: {}", e.getMessage());
+            log.warn("No se pudo enviar el aviso por webhook: {}", e.getMessage());
         }
-        return false;
+        return enviado;
     }
 
     private String escapar(String texto) {

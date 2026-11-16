@@ -109,6 +109,13 @@ services:
       LIMITE_CREDENCIAL:    "${LIMITE_CREDENCIAL:-600}"
       LIMITE_ANONIMA:       "${LIMITE_ANONIMA:-300}"
       LIMITE_CREDENCIALES:  "${LIMITE_CREDENCIALES:-20}"
+      # Correo saliente de los avisos. Van las mismas variables que usa el
+      # SIH: se copian del .env y comparten la cuenta de Gmail.
+      MAIL_HOST:            "${MAIL_HOST:-}"
+      MAIL_PORT:            "${MAIL_PORT:-587}"
+      MAIL_USERNAME:        "${MAIL_USERNAME:-}"
+      MAIL_PASSWORD:        "${MAIL_PASSWORD:-}"
+      ALERTAS_NOMBRE:       "${ALERTAS_NOMBRE:-SIRVE-P}"
       TZ:          "America/Mexico_City"
     networks:
       - interna

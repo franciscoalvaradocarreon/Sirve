@@ -187,6 +187,29 @@ export function Parametros() {
           </label>
 
           <label className="block text-xs text-texto-tenue">
+            Correos que reciben el aviso (separados por comas)
+            <div className="mt-1 flex gap-2">
+              <input
+                value={valores['alerta.correo'] ?? ''}
+                onChange={(e) =>
+                  setValores((prev) => ({ ...prev, 'alerta.correo': e.target.value }))
+                }
+                placeholder="quien@ejemplo.com, otro@ejemplo.com"
+                className="flex-1 rounded-lg border border-borde bg-superficie px-3 py-1.5 text-sm text-texto"
+              />
+              <button
+                onClick={() => void guardar('alerta.correo', valores['alerta.correo'] ?? '')}
+                className="rounded-lg border border-borde px-3 py-1.5 text-xs hover:text-primario"
+              >
+                {guardado === 'alerta.correo' ? <Check size={14} /> : 'Guardar'}
+              </button>
+            </div>
+            <span className="mt-1 block text-[11px] text-texto-tenue">
+              Usa la cuenta de correo configurada en el servidor. Vacío: no se manda correo.
+            </span>
+          </label>
+
+          <label className="block text-xs text-texto-tenue">
             Dirección del webhook (bot de Telegram o servicio propio)
             <div className="mt-1 flex gap-2">
               <input

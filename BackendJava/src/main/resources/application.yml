@@ -56,6 +56,21 @@ spring:
   jackson:
     property-naming-strategy: SNAKE_CASE
 
+
+  # Correo saliente para los avisos. Misma cuenta que el SIH: se copian
+  # las variables del .env y no hay nada nuevo que contratar.
+  mail:
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+      mail.smtp.starttls.required: true
+      mail.smtp.connectiontimeout: 10000
+      mail.smtp.timeout: 10000
+
 app:
   cors:
     # En desarrollo, Vite. En producción el front va dentro del WAR (mismo origen).
@@ -73,6 +88,9 @@ app:
   # Contraseña del primer administrador, solo para el arranque inicial.
   admin:
     clave: ${ADMIN_CLAVE:}
+
+  alertas:
+    nombre: ${ALERTAS_NOMBRE:SIRVE-P}
 
   # Interruptor de la sala de resultados. Apagada, la página existe pero no
   # publica cifras: se enciende el día de la jornada.
