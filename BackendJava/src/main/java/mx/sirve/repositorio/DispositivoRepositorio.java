@@ -154,11 +154,21 @@ public class DispositivoRepositorio {
     }
 
     /** Reemite el código: borra el pase y deja uno nuevo pendiente de usar. */
+    /**
+     * Reemite el código de un teléfono que todavía no se enrola.
+     *
+     * La caducidad se renueva aquí: sin eso, el código nuevo nacía con la fecha
+     * del anterior —ya pasada— y el teléfono no podía enrolarse nunca más.
+     */
     public void reemitir(int idDispositivo, String codigoHash, int horas) {
         jdbc.update("""
                 UPDATE sirve.dispositivo
-                   SET codigo_hash = ?, pase_hash = NULL, enrolado_en = NULL, activo = true
+                   SET codigo_hash = ?,
+                       codigo_expira = now() + make_interval(hours => ?),
+                       pase_hash = NULL,
+                       enrolado_en = NULL,
+                       activo = true
                  WHERE id = ?
-                """, codigoHash, idDispositivo);
+                """, codigoHash, horas, idDispositivo);
     }
 }
