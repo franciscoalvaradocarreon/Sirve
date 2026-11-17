@@ -28,10 +28,23 @@ public class MisCasillasControlador {
         this.capturistas = capturistas;
     }
 
+    /**
+     * Las casillas del teléfono.
+     *
+     * El capturista sale del pase, no del cuerpo. Si la petición llega con
+     * sesión de escritorio —que el filtro también acepta— no hay capturista, y
+     * eso antes reventaba con un error interno: aquí se explica qué hacer.
+     */
     @GetMapping
     public ResponseEntity<List<CasillaAsignadaDTO>> listar(
-            @RequestAttribute(PaseFiltro.ATRIBUTO_CAPTURISTA) int idCapturista,
+            @RequestAttribute(name = PaseFiltro.ATRIBUTO_CAPTURISTA, required = false)
+            Integer idCapturista,
             @RequestParam(name = "id_eleccion") int idEleccion) {
+
+        if (idCapturista == null) {
+            throw new mx.sirve.excepcion.DatosInvalidosExcepcion("SESION_TELEFONO",
+                    "Esta pantalla es del teléfono. Para capturar desde el escritorio usa «Capturar casilla».");
+        }
         return ResponseEntity.ok(capturistas.misCasillas(idCapturista, idEleccion));
     }
 }

@@ -28,7 +28,13 @@ public class SesionControlador {
 
     @GetMapping
     public ResponseEntity<CapturistaDTO> sesion(
-            @RequestAttribute(PaseFiltro.ATRIBUTO_CAPTURISTA) int idCapturista) {
+            @RequestAttribute(name = PaseFiltro.ATRIBUTO_CAPTURISTA, required = false)
+            Integer idCapturista) {
+
+        if (idCapturista == null) {
+            throw new mx.sirve.excepcion.DatosInvalidosExcepcion("SESION_TELEFONO",
+                    "Esta ruta es del teléfono; el escritorio usa su propia sesión.");
+        }
         return ResponseEntity.ok(capturistas.obtener(idCapturista));
     }
 }

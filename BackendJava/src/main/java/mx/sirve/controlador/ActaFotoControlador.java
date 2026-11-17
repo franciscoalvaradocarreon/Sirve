@@ -41,8 +41,17 @@ public class ActaFotoControlador {
             @PathVariable int idCasilla,
             @PathVariable int idEleccion,
             @RequestParam("archivo") MultipartFile archivo,
-            @RequestAttribute(PaseFiltro.ATRIBUTO_CAPTURISTA) int idCapturista,
-            @RequestAttribute(PaseFiltro.ATRIBUTO_DISPOSITIVO) int idDispositivo) {
+            @RequestAttribute(name = PaseFiltro.ATRIBUTO_CAPTURISTA, required = false)
+            Integer idCapturista,
+            @RequestAttribute(name = PaseFiltro.ATRIBUTO_DISPOSITIVO, required = false)
+            Integer idDispositivo) {
+
+        // La foto se sube desde el teléfono. Con sesión de escritorio no hay
+        // capturista ni dispositivo, y el error interno no explicaba nada.
+        if (idCapturista == null || idDispositivo == null) {
+            throw new mx.sirve.excepcion.DatosInvalidosExcepcion("SESION_TELEFONO",
+                    "La foto del acta se sube desde el teléfono.");
+        }
         return ResponseEntity.ok(
                 servicio.guardar(idCasilla, idEleccion, archivo, idCapturista, idDispositivo));
     }
