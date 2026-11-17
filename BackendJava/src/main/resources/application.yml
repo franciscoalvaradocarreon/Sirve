@@ -109,15 +109,17 @@ app:
     anonima: ${LIMITE_ANONIMA:300}
     credenciales: ${LIMITE_CREDENCIALES:20}
 
-# Actuator: solo la salud, y sin el índice.
+# Actuator: solo la salud.
 #
 # El despliegue automático pregunta por /actuator/health/liveness desde el propio
 # servidor para saber si la aplicación levantó; quitarlo dejaría los despliegues
-# a ciegas. Lo que se cierra es el índice /actuator, que enumeraba lo disponible
-# y le decía a cualquiera qué framework corre y qué endpoints existen.
+# a ciegas.
 #
-# El resto (env, loggers, heapdump, metrics) nunca estuvo expuesto: comprobado
-# desde internet, todas esas rutas respondían 404.
+# Cerrar el índice desde aquí NO funcionó con Spring Boot 4.1: /actuator seguía
+# respondiendo 200 y publicando la versión desplegada. El cierre de verdad está
+# en Caddy, que responde 404 a todo /actuator antes de llegar a la aplicación.
+# La línea de «discovery» se queda como refuerzo para otras versiones, no como
+# la protección.
 management:
   endpoints:
     web:
