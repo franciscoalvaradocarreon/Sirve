@@ -75,6 +75,11 @@ public class SesionFiltro extends OncePerRequestFilter {
             // representante, que solo consulta actas y avance.
             new Regla("/api/reportes/operacion",
                     java.util.Set.of("ADMIN", "COORDINADOR", "ANALISTA", "AUDITOR")),
+            // La asignación dice qué capturista cubre qué sección: es de quien
+            // organiza la captura. Al representante no le toca, y tampoco tiene
+            // el menú.
+            new Regla("/api/reportes/asignacion",
+                    java.util.Set.of("ADMIN", "COORDINADOR", "ANALISTA", "AUDITOR")),
             new Regla("/api/reportes",
                     java.util.Set.of("ADMIN", "COORDINADOR", "ANALISTA", "AUDITOR", "REPRESENTANTE")),
             new Regla("/api/catalogos", java.util.Set.of("ADMIN", "COORDINADOR")),
