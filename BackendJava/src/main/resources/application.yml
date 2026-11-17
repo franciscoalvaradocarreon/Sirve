@@ -109,11 +109,22 @@ app:
     anonima: ${LIMITE_ANONIMA:300}
     credenciales: ${LIMITE_CREDENCIALES:20}
 
+# Actuator: solo la salud, y sin el índice.
+#
+# El despliegue automático pregunta por /actuator/health/liveness desde el propio
+# servidor para saber si la aplicación levantó; quitarlo dejaría los despliegues
+# a ciegas. Lo que se cierra es el índice /actuator, que enumeraba lo disponible
+# y le decía a cualquiera qué framework corre y qué endpoints existen.
+#
+# El resto (env, loggers, heapdump, metrics) nunca estuvo expuesto: comprobado
+# desde internet, todas esas rutas respondían 404.
 management:
   endpoints:
     web:
       exposure:
         include: health
+      discovery:
+        enabled: false
   endpoint:
     health:
       probes:
