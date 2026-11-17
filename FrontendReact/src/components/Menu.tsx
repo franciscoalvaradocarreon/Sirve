@@ -4,6 +4,7 @@ import { ChevronDown, LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react
 import { NOMBRE_SISTEMA, DESCRIPCION_SISTEMA } from '../utils/tema'
 import { iconoPorNombre } from '../utils/iconos'
 import { useSesion } from '../context/SesionContext'
+import { cliente } from '../api/cliente'
 
 const CLAVE_ABIERTOS = 'sirve-menu-abiertos'
 
@@ -26,6 +27,22 @@ export function Menu({ colapsado, onAlternar }: Props) {
   const { pathname } = useLocation()
   const navegar = useNavigate()
   const { menus, salir } = useSesion()
+
+  /*
+   * Versión desplegada. Se pide al servidor y no se escribe en el código: así
+   * lo que se ve en pantalla es lo que está corriendo, no lo que alguien creyó
+   * compilar. Sirve para contestar «¿ya está la corrección?» sin abrir consola.
+   */
+  const [version, setVersion] = useState<string | null>(null)
+
+  useEffect(() => {
+    cliente
+      .get<{ version: string }>('/version', { timeout: 8000 })
+      .then((r) => setVersion(r.data.version.replace(/^sirve-p:/, '')))
+      .catch(() => {
+        // Sin dato no se muestra nada: es un detalle, no un error.
+      })
+  }, [])
 
   const [abiertos, setAbiertos] = useState<number[]>(() => {
     try {
@@ -160,14 +177,25 @@ export function Menu({ colapsado, onAlternar }: Props) {
         {!colapsado && <span>Cerrar sesión</span>}
       </button>
 
-      <button
-        onClick={onAlternar}
-        className="flex items-center gap-3 border-t border-borde px-4 py-3 text-sm text-texto-tenue hover:text-texto"
-        title={colapsado ? 'Expandir menú' : 'Colapsar menú'}
-      >
-        {colapsado ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
-        {!colapsado && <span>Colapsar</span>}
-      </button>
+      <div className="flex items-center border-t border-borde pr-4">
+        <button
+          onClick={onAlternar}
+          className="flex flex-1 items-center gap-3 px-4 py-3 text-sm text-texto-tenue hover:text-texto"
+          title={colapsado ? 'Expandir menú' : 'Colapsar menú'}
+        >
+          {colapsado ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          {!colapsado && <span>Colapsar</span>}
+        </button>
+
+        {!colapsado && version && (
+          <span
+            className="shrink-0 font-mono text-[11px] text-texto-tenue"
+            title={`Versión desplegada: ${version}`}
+          >
+            {version}
+          </span>
+        )}
+      </div>
 
 
     </aside>
