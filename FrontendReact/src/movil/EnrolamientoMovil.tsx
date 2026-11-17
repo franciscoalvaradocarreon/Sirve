@@ -57,7 +57,7 @@ export function EnrolamientoMovil({ alEnrolar }: { alEnrolar: () => void }) {
       <div className="mx-auto w-full max-w-sm">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primario/10">
-            <KeyRound size={26} className="text-primario" />
+            <KeyRound size={26} className="text-primario-texto" />
           </div>
           <h1 className="text-lg font-semibold text-texto">Enlazar este teléfono</h1>
           <p className="mt-1 text-sm text-texto-tenue">

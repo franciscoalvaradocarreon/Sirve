@@ -75,7 +75,7 @@ export function MovilLayout() {
 
   const claseTab = ({ isActive }: { isActive: boolean }) =>
     `flex flex-1 flex-col items-center gap-1 py-2 text-xs transition-colors ${
-      isActive ? 'text-primario' : 'text-texto-tenue'
+      isActive ? 'text-primario-texto' : 'text-texto-tenue'
     }`
 
   /*
@@ -122,43 +122,34 @@ export function MovilLayout() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-fondo">
-      <header className="sticky top-0 z-10 border-b border-borde bg-superficie/95 backdrop-blur">
-        <div className="flex items-center justify-between gap-3 px-4 py-3">
-          <div className="min-w-0">
-            {/* Nombre del sistema y, al lado, quién está capturando: en una
-                casilla con varios teléfonos a la mano, saber de quién es este
-                evita confusiones. */}
-            <div className="flex min-w-0 items-center gap-2">
-              <p className="shrink-0 text-sm font-semibold text-texto">{NOMBRE_SISTEMA}</p>
-              {sesion?.nombre && (
-                <span
-                  className="truncate rounded-md border border-primario/30 bg-primario/10 px-2 py-0.5 text-xs font-medium text-primario"
-                  title={sesion.nombre}
-                >
-                  {sesion.nombre}
-                </span>
-              )}
-            </div>
+      <header className="sticky top-0 z-10 border-b border-borde bg-superficie">
+        <div className="flex items-center gap-2 px-4 py-2">
+          {/* Un solo renglón: sistema, quién captura, en qué proceso, conexión y
+              tamaño de letra. La cabecera baja de 89px a 43, y esos 46px vuelven
+              a la boleta. */}
+          <p className="shrink-0 text-sm font-semibold text-texto">{NOMBRE_SISTEMA}</p>
 
-            {/* Renglón con el uso y, al lado, el proceso en curso. Va como
-                franja y no como desplegable: quien captura no lo elige, solo
-                necesita saber en cuál está. */}
-            <div className="mt-1 flex items-center gap-2">
-              <span className="text-xs text-texto-tenue">Captura en casilla</span>
-              {proceso && (
-                <span className="rounded-md border border-primario/30 bg-primario/10 px-2 py-0.5 text-xs font-medium text-primario">
-                  Proceso {proceso.anio}
-                </span>
-              )}
-            </div>
-          </div>
+          {sesion?.nombre && (
+            <span
+              className="min-w-0 truncate rounded-md border border-primario-texto/30 bg-primario/10 px-2 py-0.5 text-xs font-medium text-primario-texto"
+              title={sesion.nombre}
+            >
+              {sesion.nombre}
+            </span>
+          )}
 
-          <div className="flex shrink-0 items-center gap-2">
+          {proceso && (
+            <span className="shrink-0 rounded-md border border-borde px-2 py-0.5 text-xs text-texto-tenue">
+              Proceso {proceso.anio}
+            </span>
+          )}
+
+          <div className="ml-auto flex shrink-0 items-center gap-2">
             {enLinea ? (
               <span
                 className={`rounded-full px-2.5 py-1 text-xs ${
                   pendientes === 0
-                    ? 'bg-primario/10 text-primario'
+                    ? 'bg-primario/10 text-primario-texto'
                     : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
                 }`}
               >
@@ -166,7 +157,7 @@ export function MovilLayout() {
               </span>
             ) : (
               <span className="flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-1 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                <CloudOff size={13} />
+                <CloudOff size={16} />
                 Sin conexión
               </span>
             )}
@@ -179,7 +170,7 @@ export function MovilLayout() {
               title={textoGrande ? 'Volver al tamaño normal' : 'Agrandar la letra'}
               className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
                 textoGrande
-                  ? 'border-primario bg-primario text-white'
+                  ? 'border-primario-texto bg-primario-texto text-white'
                   : 'border-borde text-texto-tenue'
               }`}
             >

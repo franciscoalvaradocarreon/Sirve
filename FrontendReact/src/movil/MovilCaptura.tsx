@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Camera, CheckCircle2, CloudOff, Download, Save } from 'lucide-react'
+import { Camera, Check, CheckCircle2, CloudOff, Download, Save } from 'lucide-react'
 import { ErrorApi } from '../api/cliente'
 import { capturaServicio } from '../api/capturaServicio'
 import { dispositivoServicio } from '../api/dispositivoServicio'
@@ -531,7 +531,16 @@ export function MovilCaptura() {
     }
   }
 
+  /** Borra la captura en curso. Pregunta antes: en la casilla no hay deshacer. */
   const reiniciar = () => {
+    const hayDatos =
+      Object.values(votos).some((v) => v !== '') || totalActa || nulos || noRegistrados
+    if (
+      hayDatos &&
+      !window.confirm('Se borra lo capturado en esta casilla. ¿Continuar?')
+    ) {
+      return
+    }
     if (idCasilla && idEleccion) limpiarBorrador(claveBorrador(idCasilla, idEleccion))
     const mapa: Record<number, string> = {}
     opciones.forEach((o) => {
@@ -567,7 +576,7 @@ export function MovilCaptura() {
             <select
               value={idEleccion ?? ''}
               onChange={(e) => cambiar('id_eleccion', e.target.value, ['id_casilla'])}
-              className="mt-1 w-full rounded-lg border border-borde bg-superficie px-3 py-2.5 text-base text-texto"
+              className="mt-1 w-full rounded-lg border border-borde bg-superficie px-3 py-2.5 text-base text-texto focus:border-primario-texto focus:outline-none focus-visible:ring-2 focus-visible:ring-primario-texto/40"
             >
               {elecciones.map((e) => (
                 <option key={e.id} value={e.id}>
@@ -585,7 +594,7 @@ export function MovilCaptura() {
               value={idCasilla ?? ''}
               onChange={(e) => cambiar('id_casilla', e.target.value)}
               disabled={asignadas.length === 0}
-              className="mt-1 w-full rounded-lg border border-borde bg-superficie px-3 py-2.5 text-base text-texto disabled:opacity-50"
+              className="mt-1 w-full rounded-lg border border-borde bg-superficie px-3 py-2.5 text-base text-texto disabled:opacity-50 focus:border-primario-texto focus:outline-none focus-visible:ring-2 focus-visible:ring-primario-texto/40"
             >
               {asignadas.length === 0 && <option value="">Sin casillas asignadas</option>}
               {idCasilla === null && asignadas.length > 0 && (
@@ -628,10 +637,10 @@ export function MovilCaptura() {
             <div className="min-w-0">
               <p className="flex items-center gap-1.5 text-sm text-texto">
                 {listoSinConexion && (
-                  <CheckCircle2 size={15} className="shrink-0 text-primario" />
+                  <CheckCircle2 size={16} className="shrink-0 text-primario-texto" />
                 )}
                 {listoSinConexion
-                  ? 'Listo para trabajar sin señal'
+                  ? 'Listo sin señal'
                   : piezas.listas > 0
                     ? 'Preparación incompleta'
                     : 'Sin descargar en este teléfono'}
@@ -644,11 +653,12 @@ export function MovilCaptura() {
             </div>
 
             <button
+              type="button"
               onClick={() => void preparar()}
               disabled={preparando || !enLinea || elecciones.length === 0}
-              className="flex shrink-0 items-center gap-1.5 rounded-lg border border-primario px-3 py-2 text-sm font-medium text-primario disabled:opacity-40"
+              className="flex shrink-0 items-center gap-1.5 rounded-lg border border-primario-texto px-3 py-2 text-sm font-medium text-primario-texto disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-primario-texto/40 focus-visible:ring-offset-2"
             >
-              <Download size={15} />
+              <Download size={16} />
               {preparando ? (progreso ?? 'Descargando…') : listoSinConexion ? 'Actualizar' : 'Preparar'}
             </button>
           </div>
@@ -660,10 +670,12 @@ export function MovilCaptura() {
             {opciones.map((o, i) => (
               <label
                 key={o.id}
-                title={o.etiqueta}
-                className="flex min-h-14 items-center justify-between gap-2 rounded-xl border border-borde bg-superficie px-3 py-2 transition-colors focus-within:border-primario"
+                className="flex min-h-14 items-center justify-between gap-2 rounded-xl border border-borde bg-superficie px-3 py-2 transition-colors focus-within:border-primario-texto"
               >
-                <span className="min-w-0 truncate text-xs leading-tight text-texto-tenue">
+                {/* El nombre de la opción es lo que se coteja contra el acta: va
+                    en el color de lectura y puede ocupar dos renglones, porque
+                    truncado no distingue dos coaliciones que empiezan igual. */}
+                <span className="min-w-0 flex-1 text-[13px] leading-snug text-texto line-clamp-2">
                   {o.etiqueta}
                 </span>
                 <input
@@ -675,7 +687,7 @@ export function MovilCaptura() {
                   pattern="[0-9]*"
                   enterKeyHint={i === opciones.length - 1 ? 'done' : 'next'}
                   placeholder="0"
-                  className="w-16 shrink-0 rounded-lg border border-borde bg-fondo px-2 py-1.5 text-right text-lg tabular-nums text-texto focus:border-primario focus:outline-none"
+                  className="w-16 shrink-0 rounded-lg border border-borde bg-fondo px-2 py-1.5 text-right text-lg tabular-nums text-texto focus:border-primario-texto focus:outline-none focus-visible:ring-2 focus-visible:ring-primario-texto/40"
                 />
               </label>
             ))}
@@ -710,10 +722,10 @@ export function MovilCaptura() {
               className={`flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium ${
                 fotoCargando
                   ? 'border-borde text-texto-tenue opacity-50'
-                  : 'border-primario text-primario'
+                  : 'border-primario-texto text-primario-texto'
               }`}
             >
-              <Camera size={15} />
+              <Camera size={16} />
               {fotoCargando ? 'Leyendo…' : fotoEstado === 'ninguna' ? 'Tomar foto' : 'Cambiar'}
               <input
                 type="file"
@@ -734,23 +746,35 @@ export function MovilCaptura() {
             <img
               src={fotoVista}
               alt="Acta capturada"
-              className="mt-3 max-h-40 w-full rounded-lg border border-borde object-cover"
+              className="mt-3 max-h-48 w-full rounded-lg border border-borde bg-fondo object-contain"
             />
           )}
 
           {fotoEstado === 'porEnviar' && !fotoNueva && (
             <p className="mt-2 flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400">
-              <CloudOff size={13} />
+              <CloudOff size={16} />
               Se enviará al recuperar la conexión.
             </p>
           )}
         </div>
       )}
 
-      {/* Resumen al final del contenido */}
+      {/* Cifras del acta: lo que se lee del papel. La suma y el cuadre viven en
+          la barra fija de abajo, junto al botón que guarda. */}
       {casilla && (
         <div className="mx-4 mb-4 rounded-xl border border-borde bg-superficie p-4">
-          <div className="mb-3 grid grid-cols-3 gap-2">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <p className="text-sm font-medium text-texto">Cifras del acta</p>
+            <button
+              type="button"
+              onClick={reiniciar}
+              className="rounded-lg px-2 py-1 text-xs text-texto-tenue underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-primario-texto/40 focus-visible:ring-offset-2"
+            >
+              Limpiar cifras
+            </button>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
             <label className="text-xs text-texto-tenue">
               No registrados
               <input
@@ -758,7 +782,7 @@ export function MovilCaptura() {
                 onChange={(e) => setNoRegistrados(e.target.value.replace(/\D/g, ''))}
                 inputMode="numeric"
                 placeholder="0"
-                className="mt-1 w-full rounded-lg border border-borde bg-fondo px-2 py-2 text-right text-base tabular-nums text-texto focus:border-primario focus:outline-none"
+                className="mt-1 w-full rounded-lg border border-borde bg-fondo px-2 py-2 text-right text-base tabular-nums text-texto focus:border-primario-texto focus:outline-none focus-visible:ring-2 focus-visible:ring-primario-texto/40"
               />
             </label>
             <label className="text-xs text-texto-tenue">
@@ -768,7 +792,7 @@ export function MovilCaptura() {
                 onChange={(e) => setNulos(e.target.value.replace(/\D/g, ''))}
                 inputMode="numeric"
                 placeholder="0"
-                className="mt-1 w-full rounded-lg border border-borde bg-fondo px-2 py-2 text-right text-base tabular-nums text-texto focus:border-primario focus:outline-none"
+                className="mt-1 w-full rounded-lg border border-borde bg-fondo px-2 py-2 text-right text-base tabular-nums text-texto focus:border-primario-texto focus:outline-none focus-visible:ring-2 focus-visible:ring-primario-texto/40"
               />
             </label>
             <label className="text-xs text-texto-tenue">
@@ -778,50 +802,61 @@ export function MovilCaptura() {
                 onChange={(e) => setTotalActa(e.target.value.replace(/\D/g, ''))}
                 inputMode="numeric"
                 placeholder="0"
-                className="mt-1 w-full rounded-lg border border-borde bg-fondo px-2 py-2 text-right text-base tabular-nums text-texto focus:border-primario focus:outline-none"
+                className="mt-1 w-full rounded-lg border border-borde bg-fondo px-2 py-2 text-right text-base tabular-nums text-texto focus:border-primario-texto focus:outline-none focus-visible:ring-2 focus-visible:ring-primario-texto/40"
               />
             </label>
           </div>
 
-          <div className="mb-3 flex items-center justify-between text-sm">
-            <span className="text-texto-tenue">
+        </div>
+      )}
+
+      {/* Barra fija: una sola fila. El cuadre y el botón caben en 60px para no
+          comerse la boleta; el sello solo aparece cuando la suma cierra. */}
+      {casilla && (
+        <div className="sticky bottom-0 z-10 border-t border-borde bg-superficie px-4 py-1.5">
+          <div className="flex items-center gap-2">
+            <span className="shrink-0 text-xs tabular-nums text-texto-tenue">
               Suma {suma.toLocaleString('es-MX')}
-              {total > 0 && (
-                <>
-                  {' · '}
-                  <span className={cuadra ? 'text-primario' : 'text-amber-700 dark:text-amber-400'}>
-                    {cuadra ? 'Cuadra' : `Diferencia ${diferencia.toLocaleString('es-MX')}`}
-                  </span>
-                </>
-              )}
             </span>
-            <button
-              onClick={reiniciar}
-              className="rounded-lg px-2 py-1 text-xs text-texto-tenue underline-offset-2 hover:underline"
-            >
-              Limpiar
-            </button>
-          </div>
 
-          <div className="flex gap-2">
-            <button
-              onClick={() => void guardar()}
-              disabled={guardando}
-              className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-primario py-3 text-base font-medium text-white transition-opacity disabled:opacity-50"
-            >
-              <Save size={18} />
-              {guardando ? 'Guardando…' : 'Guardar'}
-            </button>
-
-            {!enLinea && (
-              <button
-                onClick={() => void guardarSinEnviar()}
-                className="flex items-center justify-center gap-2 rounded-lg border border-borde px-4 py-3 text-sm text-texto-tenue"
-              >
-                <CloudOff size={16} />
-                Sin enviar
-              </button>
+            {total > 0 ? (
+              cuadra ? (
+                <span className="flex shrink-0 items-center gap-1 rounded-md border border-primario-texto/40 bg-primario/10 px-2 py-0.5 text-xs font-medium text-primario-texto">
+                  <Check size={16} />
+                  Cuadra
+                </span>
+              ) : (
+                <span className="shrink-0 rounded-md bg-amber-100 px-2 py-0.5 text-xs font-medium tabular-nums text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                  Diferencia {diferencia.toLocaleString('es-MX')}
+                </span>
+              )
+            ) : (
+              <span className="shrink-0 text-xs text-texto-tenue">Falta el total</span>
             )}
+
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              {!enLinea && (
+                <button
+                  type="button"
+                  onClick={() => void guardarSinEnviar()}
+                  aria-label="Guardar en el teléfono sin enviar"
+                  title="Guardar en el teléfono sin enviar"
+                  className="rounded-lg border border-borde p-2.5 text-texto focus-visible:ring-2 focus-visible:ring-primario-texto/40 focus-visible:ring-offset-2"
+                >
+                  <CloudOff size={16} />
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => void guardar()}
+                disabled={guardando}
+                className="flex items-center justify-center gap-2 rounded-lg bg-primario-texto px-5 py-2.5 text-base font-medium text-white transition-colors active:opacity-90 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-primario-texto/40 focus-visible:ring-offset-2"
+              >
+                <Save size={16} />
+                {guardando ? 'Guardando…' : 'Guardar'}
+              </button>
+            </div>
           </div>
         </div>
       )}

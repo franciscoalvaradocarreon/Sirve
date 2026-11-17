@@ -136,7 +136,7 @@ export function MovilPendientes() {
 
       {filas.length === 0 ? (
         <div className="rounded-xl border border-borde bg-superficie p-8 text-center">
-          <Check size={24} className="mx-auto mb-2 text-primario" />
+          <Check size={24} className="mx-auto mb-2 text-primario-texto" />
           <p className="text-sm text-texto-tenue">Nada pendiente.</p>
         </div>
       ) : (
