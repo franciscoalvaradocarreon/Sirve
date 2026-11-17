@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Outlet } from 'react-router-dom'
-import { Moon, Sun, TriangleAlert } from 'lucide-react'
+import { Outlet, useNavigate } from 'react-router-dom'
+import { KeyRound, Moon, Sun, TriangleAlert } from 'lucide-react'
 import { Menu } from './Menu'
+import { CambiarClave } from './CambiarClave'
 import { useTema } from '../context/TemaContext'
+import { useSesion } from '../context/SesionContext'
 import { cliente } from '../api/cliente'
 
 interface Disco {
@@ -17,18 +19,25 @@ interface Disco {
 
 /**
  * Armazón de la aplicación: menú a la izquierda, contenido a la derecha y una
- * barra superior con el conmutador de tema.
+ * barra superior con quién está dentro y el conmutador de tema.
+ *
+ * Quién es y qué puede hacer va arriba, junto al tema, porque es lo primero que
+ * se mira al entrar y lo primero que se pregunta al pasarle el equipo a alguien
+ * («¿con qué usuario estás?»). Antes estaba en el pie del menú, donde se pierde
+ * entre los enlaces.
  *
  * Arriba del contenido puede ir el aviso de disco, pero solo si está encendido
- * en Parámetros: por omisión va por correo. Cuando se enciende, la franja avisa
- * de que el disco se está llenando antes de que la captura deje de guardar.
+ * en Parámetros: por omisión va por correo.
  */
 export function Layout() {
   const { tema, alternar } = useTema()
+  const { usuario, salir } = useSesion()
+  const navegar = useNavigate()
   const [colapsado, setColapsado] = useState(
     () => localStorage.getItem('sirve-menu-colapsado') === 'si',
   )
   const [disco, setDisco] = useState<Disco | null>(null)
+  const [cambiandoClave, setCambiandoClave] = useState(false)
 
   useEffect(() => {
     localStorage.setItem('sirve-menu-colapsado', colapsado ? 'si' : 'no')
@@ -51,18 +60,49 @@ export function Layout() {
 
     void revisar()
     const temporizador = window.setInterval(() => void revisar(), 5 * 60 * 1000)
+
     return () => {
       vigente = false
       window.clearInterval(temporizador)
     }
   }, [])
 
+  const inicial = (usuario?.nombre ?? usuario?.usuario ?? '?').trim().charAt(0).toUpperCase()
+
   return (
     <div className="flex h-full">
       <Menu colapsado={colapsado} onAlternar={() => setColapsado((v) => !v)} />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center justify-end gap-2 border-b border-borde bg-superficie px-6">
+        <header className="flex h-14 shrink-0 items-center justify-end gap-1 border-b border-borde bg-superficie px-6">
+          {usuario && (
+            <>
+              {/* Quién está dentro: inicial, nombre y tipo de usuario. */}
+              <div className="mr-2 flex items-center gap-2.5" title={`${usuario.usuario} · ${usuario.rol_nombre}`}>
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-borde bg-fondo-alt text-xs font-medium text-texto">
+                  {inicial}
+                </span>
+                <span className="min-w-0 text-right leading-tight">
+                  <span className="block max-w-48 truncate text-xs font-medium text-texto">
+                    {usuario.nombre}
+                  </span>
+                  <span className="block max-w-48 truncate text-xs text-texto-tenue">
+                    {usuario.rol_nombre}
+                  </span>
+                </span>
+              </div>
+
+              <button
+                onClick={() => setCambiandoClave(true)}
+                className="rounded-lg p-2 text-texto-tenue transition-colors hover:bg-fondo-alt hover:text-texto"
+                title="Cambiar mi contraseña"
+                aria-label="Cambiar mi contraseña"
+              >
+                <KeyRound size={16} />
+              </button>
+            </>
+          )}
+
           <button
             onClick={alternar}
             className="rounded-lg p-2 text-texto-tenue transition-colors hover:bg-fondo-alt hover:text-texto"
@@ -90,6 +130,21 @@ export function Layout() {
           <Outlet />
         </main>
       </div>
+
+      {cambiandoClave && (
+        <CambiarClave
+          titulo="Cambiar mi contraseña"
+          nombre={usuario?.usuario}
+          propia
+          alCerrar={() => setCambiandoClave(false)}
+          // Cambiar la propia contraseña invalida el token: hay que volver a
+          // entrar. Se avisa cerrando la sesión aquí, en lugar de dejar que el
+          // siguiente clic falle con un 401 sin explicación.
+          alTerminar={() => {
+            void salir().then(() => navegar('/login', { replace: true }))
+          }}
+        />
+      )}
     </div>
   )
 }
