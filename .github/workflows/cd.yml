@@ -88,6 +88,13 @@ jobs:
              sudo -n cp docker-compose.yml '${{ secrets.RUTA_DESPLIEGUE }}/docker-compose.yml'
              cd '${{ secrets.RUTA_DESPLIEGUE }}'
              sudo -n env IMAGEN_APP='sirve-p:${{ inputs.version }}' docker compose up -d --no-build app
+
+              # La versión queda escrita en el .env. Si no, un «docker compose up»
+              # hecho a mano vuelve a la imagen que diga el .env, que se queda
+              # vieja: el 17 de noviembre eso devolvió producción a una imagen de
+              # ocho días antes, sin que nadie lo notara hasta que falló una ruta.
+              sudo -n sed -i "s|^IMAGEN_APP=.*|IMAGEN_APP='sirve-p:${{ inputs.version }}'|" .env
+              sudo -n grep IMAGEN_APP .env
              rm -rf /tmp/sirve-build
             "
 
