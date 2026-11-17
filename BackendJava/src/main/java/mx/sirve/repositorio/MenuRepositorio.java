@@ -76,13 +76,25 @@ public class MenuRepositorio {
      * Administración de menús por rol
      * ------------------------------------------------------------------ */
 
-    /** Todos los menús, en orden, con su nivel y su padre. */
+    /**
+     * Todos los menús, agrupados por su padre.
+     *
+     * El orden no puede ser solo por número: los hijos de un grupo comparten
+     * rango con los de otro, y ordenar plano intercala «Partidos» entre
+     * «Capturistas» y «Usuarios» aunque pertenezca a Catálogos. Se ordena
+     * primero por el orden del padre y después por el del hijo, así cada grupo
+     * queda seguido de sus entradas.
+     */
     public List<Map<String, Object>> catalogo() {
         return jdbc.queryForList("""
                 SELECT m.id, m.clave, m.etiqueta, m.ruta, m.icono, m.id_padre, m.orden
                   FROM sirve.menu m
+                  LEFT JOIN sirve.menu padre ON padre.id = m.id_padre
                  WHERE m.activo
-                 ORDER BY m.orden
+                 ORDER BY coalesce(padre.orden, m.orden),
+                          (m.id_padre IS NOT NULL),
+                          m.orden,
+                          m.id
                 """);
     }
 
