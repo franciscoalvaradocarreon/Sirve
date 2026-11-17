@@ -23,6 +23,7 @@ public class UsuarioServicio {
 
     private static final String ALFABETO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     private static final String[] ROLES = {
+        "REPRESENTANTE",
             "ADMIN", "COORDINADOR", "OPERADOR", "ANALISTA", "AUDITOR"
     };
 

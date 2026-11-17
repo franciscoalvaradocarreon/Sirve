@@ -134,6 +134,7 @@ public class MenuRepositorio {
                          WHEN 'OPERADOR' THEN 'Capturista'
                          WHEN 'ANALISTA' THEN 'Analista'
                          WHEN 'AUDITOR' THEN 'Auditor'
+                         WHEN 'REPRESENTANTE' THEN 'Representante'
                          ELSE e.enumlabel
                        END AS nombre
                   FROM pg_enum e

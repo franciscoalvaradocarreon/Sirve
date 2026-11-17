@@ -70,7 +70,7 @@ public class SesionFiltro extends OncePerRequestFilter {
             new Regla("/api/parametros", java.util.Set.of("ADMIN")),
             new Regla("/api/capturistas", java.util.Set.of("ADMIN", "COORDINADOR")),
             new Regla("/api/dispositivos", java.util.Set.of("ADMIN", "COORDINADOR")),
-            new Regla("/api/reportes", java.util.Set.of("ADMIN", "COORDINADOR", "ANALISTA", "AUDITOR")),
+            new Regla("/api/reportes", java.util.Set.of("ADMIN", "COORDINADOR", "ANALISTA", "AUDITOR", "REPRESENTANTE")),
             new Regla("/api/catalogos", java.util.Set.of("ADMIN", "COORDINADOR")),
             new Regla("/api/procesos", java.util.Set.of("ADMIN", "COORDINADOR")),
             new Regla("/api/elecciones", java.util.Set.of("ADMIN", "COORDINADOR")),

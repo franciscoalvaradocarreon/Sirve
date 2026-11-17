@@ -39,6 +39,7 @@ export function Usuarios() {
     ['OPERADOR', 'Capturista — captura y consulta'],
     ['ANALISTA', 'Analista — solo reportes'],
     ['AUDITOR', 'Auditor — solo reportes'],
+  ['REPRESENTANTE', 'Representante — solo consulta'],
   ]
 
   function recargar() {

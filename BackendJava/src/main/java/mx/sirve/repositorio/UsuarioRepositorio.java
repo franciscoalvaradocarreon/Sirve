@@ -149,6 +149,7 @@ public class UsuarioRepositorio {
             case "OPERADOR" -> "Capturista";
             case "ANALISTA" -> "Analista";
             case "AUDITOR" -> "Auditor";
+            case "REPRESENTANTE" -> "Representante";
             default -> rol;
         };
     }

@@ -33,6 +33,7 @@ export function EditarUsuario({
     ['OPERADOR', 'Capturista'],
     ['ANALISTA', 'Analista'],
     ['AUDITOR', 'Auditor'],
+  ['REPRESENTANTE', 'Representante'],
   ]
 
   const campo = 'mt-1 w-full rounded-lg border border-borde bg-superficie px-3 py-2 text-sm text-texto'
