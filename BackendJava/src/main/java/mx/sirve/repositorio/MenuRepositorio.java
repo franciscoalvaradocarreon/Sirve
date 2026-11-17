@@ -98,6 +98,17 @@ public class MenuRepositorio {
                 """);
     }
 
+    /** Claves de los menús concedidos a un rol, para el filtro de permisos. */
+    public List<String> clavesPorRol(String rol) {
+        return jdbc.queryForList("""
+                SELECT m.clave
+                  FROM sirve.rol_menu r
+                  JOIN sirve.menu m ON m.id = r.id_menu
+                 WHERE r.rol = ?::sirve.rol_usuario
+                   AND m.activo
+                """, String.class, rol);
+    }
+
     /** Qué menús tiene concedidos cada rol. */
     public Map<String, java.util.Set<Integer>> porRol() {
         Map<String, java.util.Set<Integer>> mapa = new java.util.LinkedHashMap<>();

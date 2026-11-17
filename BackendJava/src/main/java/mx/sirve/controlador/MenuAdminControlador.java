@@ -30,9 +30,12 @@ import java.util.Map;
 public class MenuAdminControlador {
 
     private final MenuRepositorio menus;
+    private final mx.sirve.seguridad.PermisosServicio permisos;
 
-    public MenuAdminControlador(MenuRepositorio menus) {
+    public MenuAdminControlador(MenuRepositorio menus,
+                                  mx.sirve.seguridad.PermisosServicio permisos) {
         this.menus = menus;
+        this.permisos = permisos;
     }
 
     /** Catálogo completo, los roles y lo que tiene concedido cada uno. */
@@ -65,6 +68,9 @@ public class MenuAdminControlador {
         }
 
         menus.guardarRol(rol, cuerpo.getOrDefault("menus", List.of()));
+        // El permiso se lee con caché: hay que soltarla para que el cambio
+        // aplique en la siguiente petición y no al reiniciar.
+        permisos.olvidar();
         return ResponseEntity.noContent().build();
     }
 

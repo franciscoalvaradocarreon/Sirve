@@ -93,10 +93,12 @@ public class SesionFiltro extends OncePerRequestFilter {
 
     private final JwtServicio jwt;
     private final UsuarioRepositorio usuarios;
+    private final PermisosServicio permisos;
 
-    public SesionFiltro(JwtServicio jwt, UsuarioRepositorio usuarios) {
+    public SesionFiltro(JwtServicio jwt, UsuarioRepositorio usuarios, PermisosServicio permisos) {
         this.jwt = jwt;
         this.usuarios = usuarios;
+        this.permisos = permisos;
     }
 
     @Override
@@ -138,13 +140,29 @@ public class SesionFiltro extends OncePerRequestFilter {
         }
 
         String ruta = peticion.getRequestURI();
-        for (Regla regla : REGLAS) {
-            if (ruta.equals(regla.prefijo()) || ruta.startsWith(regla.prefijo() + "/")) {
-                if (!regla.roles().contains(datos.rol())) {
-                    rechazarPermiso(respuesta);
-                    return;
+
+        /*
+         * El permiso sale del menú: lo que el rol tiene concedido en la pantalla
+         * de menús es exactamente lo que alcanza. Antes eran dos listas que no se
+         * hablaban, y conceder un menú no abría su ruta.
+         *
+         * Las rutas sin menú asociado siguen con las reglas de siempre.
+         */
+        var menu = RutasConMenu.menuDe(ruta);
+        if (menu.isPresent()) {
+            if (!permisos.tieneMenu(datos.rol(), menu.get())) {
+                rechazarPermiso(respuesta);
+                return;
+            }
+        } else {
+            for (Regla regla : REGLAS) {
+                if (ruta.equals(regla.prefijo()) || ruta.startsWith(regla.prefijo() + "/")) {
+                    if (!regla.roles().contains(datos.rol())) {
+                        rechazarPermiso(respuesta);
+                        return;
+                    }
+                    break;
                 }
-                break;
             }
         }
 

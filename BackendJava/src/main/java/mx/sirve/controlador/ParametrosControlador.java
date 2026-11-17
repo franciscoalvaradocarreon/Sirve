@@ -35,7 +35,6 @@ public class ParametrosControlador {
     @GetMapping
     public ResponseEntity<List<ParametroRepositorio.Parametro>> listar(
             @RequestAttribute(JwtServicio.ATRIBUTO_USUARIO) JwtServicio.DatosToken datos) {
-        exigirAdmin(datos);
         return ResponseEntity.ok(servicio.todos());
     }
 
@@ -44,15 +43,9 @@ public class ParametrosControlador {
             @PathVariable String clave,
             @RequestBody Map<String, String> cuerpo,
             @RequestAttribute(JwtServicio.ATRIBUTO_USUARIO) JwtServicio.DatosToken datos) {
-        exigirAdmin(datos);
         servicio.guardar(clave, cuerpo.getOrDefault("valor", ""));
         return ResponseEntity.noContent().build();
     }
 
-    private void exigirAdmin(JwtServicio.DatosToken datos) {
-        if (!"ADMIN".equals(datos.rol())) {
-            throw new SinPermisoExcepcion("SIN_PERMISO",
-                    "Solo un administrador puede cambiar los parámetros.");
-        }
-    }
+
 }

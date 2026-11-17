@@ -37,7 +37,6 @@ public class UsuarioControlador {
     @GetMapping
     public ResponseEntity<List<UsuarioDTO>> listar(
             @RequestAttribute(JwtServicio.ATRIBUTO_USUARIO) JwtServicio.DatosToken datos) {
-        exigirAdmin(datos);
         return ResponseEntity.ok(servicio.listar());
     }
 
@@ -45,7 +44,6 @@ public class UsuarioControlador {
     public ResponseEntity<Map<String, Object>> crear(
             @RequestBody Map<String, Object> cuerpo,
             @RequestAttribute(JwtServicio.ATRIBUTO_USUARIO) JwtServicio.DatosToken datos) {
-        exigirAdmin(datos);
         String clave = servicio.crear(
                 (String) cuerpo.get("usuario"),
                 (String) cuerpo.get("nombre"),
@@ -60,7 +58,6 @@ public class UsuarioControlador {
             @PathVariable String id,
             @RequestBody Map<String, Object> cuerpo,
             @RequestAttribute(JwtServicio.ATRIBUTO_USUARIO) JwtServicio.DatosToken datos) {
-        exigirAdmin(datos);
         servicio.actualizar(id,
                 (String) cuerpo.get("usuario"),
                 (String) cuerpo.getOrDefault("nombre", ""),
@@ -75,7 +72,6 @@ public class UsuarioControlador {
             @PathVariable String id,
             @RequestBody(required = false) Map<String, Object> cuerpo,
             @RequestAttribute(JwtServicio.ATRIBUTO_USUARIO) JwtServicio.DatosToken datos) {
-        exigirAdmin(datos);
         servicio.restablecer(id, cuerpo == null ? null : (String) cuerpo.get("clave"));
         return ResponseEntity.noContent().build();
     }
@@ -94,7 +90,6 @@ public class UsuarioControlador {
     public ResponseEntity<Void> eliminar(
             @PathVariable String id,
             @RequestAttribute(JwtServicio.ATRIBUTO_USUARIO) JwtServicio.DatosToken datos) {
-        exigirAdmin(datos);
         servicio.eliminar(id, datos.idUsuario());
         return ResponseEntity.noContent().build();
     }
