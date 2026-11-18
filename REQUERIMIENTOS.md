@@ -312,3 +312,6 @@ conversación y en los commits. Se actualiza cuando cambie el alcance, no cuando
 cambie el código.
 
 La correspondencia de versiones anteriores está en `HISTORIAL-VERSIONES.md`.
+
+La comparación con el análisis inicial —lo que la especificación pide y cuánto
+de eso está construido— está en `CONTRASTE-ANALISIS.md`.
