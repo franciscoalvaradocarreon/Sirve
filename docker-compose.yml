@@ -81,6 +81,10 @@ services:
       # Las fotos de acta viven fuera de la base: son archivos, no filas.
       # Un volumen propio permite borrarlas o moverlas sin tocar los datos.
       - actas:/datos/actas
+      # Los planos de sección: cartografía de INEGI convertida a SVG. Pesan
+      # más que el resto de la imagen junta y no cambian en cada liberación,
+      # así que viven en una carpeta del servidor y no dentro de la imagen.
+      - "${RUTA_PLANOS:-/opt/sirve-p/planos}:/datos/planos:ro"
     environment:
       ACTAS_RUTA: /datos/actas
       # La etiqueta con la que se construyó esta imagen. La aplicación la

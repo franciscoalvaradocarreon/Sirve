@@ -9,6 +9,7 @@ package mx.sirve.modelo.dto;
 public record SeccionDTO(
         Integer id,
         Integer idMunicipio,
+    String claveMunicipio,
         String clave,
         String municipio,
         Integer casillas,

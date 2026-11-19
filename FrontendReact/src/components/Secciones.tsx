@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { PlanoSeccion } from './PlanoSeccion'
 import { useSearchParams } from 'react-router-dom'
 import { X } from 'lucide-react'
 import { municipioServicio } from '../api/municipioServicio'
@@ -29,6 +30,8 @@ export function Secciones() {
   const [visibles, setVisibles] = useState(TANDA)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  /** Sección cuyo plano se está viendo. */
+  const [elegida, setElegida] = useState<Seccion | null>(null)
 
   const idProceso = Number(parametros.get('id_proceso')) || null
   const idMunicipio = Number(parametros.get('id_municipio')) || null
@@ -259,7 +262,8 @@ export function Secciones() {
         )}
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-borde bg-superficie">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+      <div className="min-w-0 flex-1 overflow-hidden rounded-xl border border-borde bg-superficie">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-borde text-left text-xs uppercase tracking-wide text-texto-tenue">
@@ -293,7 +297,10 @@ export function Secciones() {
               mostradas.map((s) => (
                 <tr
                   key={s.id}
-                  className="border-b border-borde transition-colors last:border-0 hover:bg-fondo-alt"
+                  onClick={() => setElegida(s)}
+                  className={`cursor-pointer border-b border-borde transition-colors last:border-0 hover:bg-fondo-alt ${
+                    elegida?.id === s.id ? 'bg-primario/5' : ''
+                  }`}
                 >
                   <td className="px-4 py-2.5 font-mono text-xs text-texto">{s.clave}</td>
                   {sinMunicipio && (
@@ -329,6 +336,9 @@ export function Secciones() {
             </tfoot>
           )}
         </table>
+      </div>
+
+        {elegida && <PlanoSeccion seccion={elegida} alCerrar={() => setElegida(null)} />}
       </div>
 
       {restantes > 0 && (

@@ -45,6 +45,7 @@ export interface Distrito {
 export interface Seccion {
   id: number
   id_municipio: number
+  clave_municipio: string
   clave: string
   municipio: string
   casillas: number
