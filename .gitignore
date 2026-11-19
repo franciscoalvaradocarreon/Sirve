@@ -75,3 +75,7 @@ pgdata/
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# Cartografía convertida a SVG: 122 MB de archivos generados.
+# Se regeneran con cartografia/generar-planos.py y no viajan en git.
+/planos/
