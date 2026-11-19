@@ -139,6 +139,9 @@ HECHO
   · coaliciones, con integrantes          (/catalogos/coaliciones)
   · boletas por elección: qué opciones van, en qué orden, con color y logo
     y activar o desactivar                (/catalogos/boletas)
+  · plano de cada sección con la cartografía de INEGI: polígono resaltado,
+    municipio, distritos local y federal y secciones vecinas
+                                          (/catalogos/secciones)
 ```
 
 ```
