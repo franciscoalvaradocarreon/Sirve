@@ -22,15 +22,22 @@
  *   falla en el monte.
  */
 
-/** Lado mayor máximo, en píxeles. Con 1600 se lee el número de un acta. */
-const LADO_MAXIMO = 1600
+/**
+ * Lado mayor máximo, en píxeles.
+ *
+ * Se midió con un acta de 12 MP: a 1600 px los números quedan de ~25 px de
+ * alto y el archivo ronda los 300 KB. A 1440 quedan de ~22 px —todavía
+ * legibles— y pesa cerca de un tercio menos. Bajar a 1024 deja los números en
+ * 16 px, que en una foto movida ya no se lee: ese es el límite que no se cruza.
+ */
+const LADO_MAXIMO = 1440
 
-/** Calidad inicial. Da alrededor de 300 KB en un acta bien iluminada. */
-const CALIDAD = 0.7
+/** Calidad inicial. Da alrededor de 190 KB en un acta bien iluminada. */
+const CALIDAD = 0.62
 
 /** Si después del primer intento pesa más que esto, se comprime otra vez. */
-const PESO_ACEPTABLE = 400 * 1024
-const CALIDAD_DE_EMERGENCIA = 0.5
+const PESO_ACEPTABLE = 250 * 1024
+const CALIDAD_DE_EMERGENCIA = 0.45
 
 export interface FotoComprimida {
   archivo: Blob
