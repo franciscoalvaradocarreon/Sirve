@@ -65,6 +65,13 @@ jobs:
 
       - name: Desplegar en el servidor
         run: |
+          # El servidor entra al registro con el token de esta corrida: el
+          # paquete es privado y el token se manda por la entrada estándar,
+          # nunca en la línea de comandos.
+          echo "${{ secrets.GITHUB_TOKEN }}" | \
+            ssh -i ~/.ssh/id_deploy "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+              "sudo -n docker login ghcr.io -u '${{ github.actor }}' --password-stdin"
+
           # El código ya no viaja: solo el compose. La imagen se descarga.
           scp -i ~/.ssh/id_deploy docker-compose.yml \
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/docker-compose.yml"
