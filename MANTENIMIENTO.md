@@ -156,27 +156,37 @@ sudo journalctl -u sirve-respaldo -n 5 --no-pager
 
 ### Cada tres meses, restaurar de verdad
 
-Un respaldo que nunca se restauró no es un respaldo. Se hace contra una base
-aparte para no tocar producción:
+Un respaldo que nunca se restauró no es un respaldo. Hay un guion que lo hace
+todo y no toca producción:
 
 ```bash
-cd /tmp
-HOME=/home/ubuntu /home/ubuntu/oci-venv/bin/oci os object get --auth instance_principal \
-  --region mx-queretaro-1 --bucket-name sirve-sih-respaldos \
-  --name "sirve/base/sirve-<fecha>.dump" --file restaurar.dump
-
-sudo docker cp restaurar.dump sirve-p-db-1:/tmp/r.dump
-sudo docker exec sirve-p-db-1 psql -U User_app -d postgres -c 'CREATE DATABASE prueba_restore;'
-sudo docker exec sirve-p-db-1 pg_restore -U User_app -d prueba_restore \
-  --no-owner --no-privileges /tmp/r.dump
-sudo docker exec sirve-p-db-1 psql -U User_app -d prueba_restore \
-  -c 'select count(*) from sirve.captura;'
-sudo docker exec sirve-p-db-1 psql -U User_app -d postgres -c 'DROP DATABASE prueba_restore;'
-sudo docker exec sirve-p-db-1 rm -f /tmp/r.dump && rm -f restaurar.dump
+sudo bash /opt/sirve-p/mantenimiento/probar-restauracion.sh
+echo $?        # 0 = el respaldo restaura completo
 ```
 
-El número tiene que coincidir con producción. Si no coincide, el respaldo no
-sirve y hay que averiguar por qué antes de necesitarlo.
+Qué hace: baja el volcado más reciente del bucket, crea una base aparte
+(`prueba_restore`), restaura, compara **18 cosas** contra producción y borra la
+base y el volcado temporal.
+
+No compara solo conteos: también **huellas del contenido** (md5 sobre las filas
+ordenadas de capturas, actas y casillas). Dos bases con los mismos números
+pueden tener datos distintos; la huella lo descarta.
+
+```
+  tabla                     producción   restaurada  resultado
+  capturas                        23928        23928  ✓
+  suma de votos                 7391187      7391187  ✓
+  renglones de voto              273066       273066  ✓
+  huella de capturas       6c9cc7916dfe… 6c9cc7916dfe…  ✓
+  huella de actas          eb4dc360341e… eb4dc360341e…  ✓
+  …
+  RESULTADO: el respaldo restaura completo · 23 s
+```
+
+Si alguna línea sale con ✗, el respaldo no sirve y hay que averiguar por qué
+**antes** de necesitarlo. La primera vez que se corrió, tres líneas fallaron:
+no era el respaldo, eran consultas mías contra columnas que no existen
+(`tamano` en vez de `bytes`, `voto` en vez de `captura_voto`).
 
 ### Si el respaldo deja de subir
 

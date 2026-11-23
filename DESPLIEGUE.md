@@ -369,8 +369,18 @@ de Ubuntu: `/home/ubuntu/oci-venv/bin/oci`.
 
 ### Probar una restauración
 
-Un respaldo que nunca se ha restaurado es una suposición. El procedimiento es
-el de la sección 2.6, contra una base aparte para no tocar la de producción.
+Un respaldo que nunca se ha restaurado es una suposición. Hay un guion que lo
+comprueba sin tocar producción:
+
+```bash
+sudo bash /opt/sirve-p/mantenimiento/probar-restauracion.sh
+echo $?        # 0 = restaura completo
+```
+
+Baja el último volcado del bucket, lo restaura en una base aparte y compara
+contra producción **conteos y huellas del contenido** (md5 de las filas
+ordenadas). Al terminar borra la base de prueba y el volcado. La primera
+corrida, del 23 de noviembre: 18 comparaciones, todas iguales, 23 segundos.
 
 ---
 
@@ -513,6 +523,5 @@ Android 14 rechaza la instalación.
 ```
 dominio propio          con uno, mover el servidor no obliga a recompilar el APK
 aviso de caída          hoy nadie se entera hasta que alguien busca
-restauración probada    el volcado nunca se ha restaurado en limpio
 aviso si falla el respaldo   queda en el estado y en el journal, sin avisar
 ```
