@@ -30,6 +30,23 @@ services:
     image: postgres:17-alpine
     restart: unless-stopped
     logging: *registros
+    # En un servidor de 1 GB, PostgreSQL vive en 320 MB. Los parámetros de
+    # abajo están pensados para eso: caché chica, pocas conexiones y trabajo
+    # en memoria acotado. Alcanza de sobra para lectura corta y escritura de
+    # una fila a la vez, que es todo lo que hace este sistema.
+    mem_limit: ${MEM_DB:-320m}
+    shm_size: 64m
+    command: >
+      postgres
+      -c shared_buffers=64MB
+      -c effective_cache_size=192MB
+      -c work_mem=4MB
+      -c maintenance_work_mem=48MB
+      -c max_connections=40
+      -c wal_buffers=8MB
+      -c checkpoint_completion_target=0.9
+      -c random_page_cost=1.1
+      -c log_min_duration_statement=2000
     environment:
       POSTGRES_DB:       "${DB_NAME:-SIRVE}"
       POSTGRES_USER:     "${DB_ADMIN_USER:-User_app}"
@@ -65,9 +82,10 @@ services:
     restart: unless-stopped
     logging: *registros
 
-    # La JVM calcula su heap con MaxRAMPercentage=75 (ver Dockerfile). Sin
-    # límite vería toda la RAM del servidor y competiría con la base del SIH.
-    mem_limit: 1g
+    # Servidor de 1 GB: la aplicación tiene que caber en 560 MB, con el SIH
+    # detenido. Los valores de la JVM están calculados para eso: heap 256 +
+    # metadatos 160 + código 48 + pilas de hilo ≈ 500 MB.
+    mem_limit: ${MEM_APP:-560m}
 
     depends_on:
       db:
@@ -87,6 +105,16 @@ services:
       - "${RUTA_PLANOS:-/opt/sirve-p/planos}:/datos/planos:ro"
     environment:
       ACTAS_RUTA: /datos/actas
+      # Ajustes de la JVM para una máquina pequeña: heap acotado, recolector
+      # serial (menos hilos y menos memoria que G1), metadatos limitados y
+      # pilas de hilo más chicas. Con ExitOnOutOfMemoryError, si se pasa,
+      # el contenedor reinicia en lugar de quedarse arrastrándose.
+      JAVA_TOOL_OPTIONS: >-
+        -Xms96m -Xmx${HEAP_APP:-256m} -XX:MaxMetaspaceSize=160m
+        -XX:ReservedCodeCacheSize=48m -XX:+UseSerialGC
+        -XX:ActiveProcessorCount=2 -Xss512k -XX:+ExitOnOutOfMemoryError
+      DB_POOL: ${DB_POOL_APP:-6}
+      TOMCAT_HILOS: ${TOMCAT_HILOS:-40}
       # La etiqueta con la que se construyó esta imagen. La aplicación la
       # devuelve en /api/version para saber qué corre sin entrar al servidor.
       VERSION_APP: "${IMAGEN_APP:-local}"

@@ -64,6 +64,9 @@ EXPOSE 8080
 ENV PUERTO=8080
 
 # La JVM respeta el límite de memoria del contenedor (mem_limit en compose).
-ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -XX:+UseContainerSupport"
+# Sin -Xmx fijo: el tamaño del heap lo decide el compose, según el tamaño
+# del servidor. Con MaxRAMPercentage, un contenedor de 560 MB reservaría
+# 420 MB de heap y se quedaría sin aire para metadatos y pilas.
+ENV JAVA_OPTS="-XX:+UseContainerSupport"
 
 ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.jar"]
