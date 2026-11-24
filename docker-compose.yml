@@ -113,8 +113,12 @@ services:
         -Xms64m -Xmx${HEAP_APP:-192m} -XX:MaxMetaspaceSize=160m
         -XX:ReservedCodeCacheSize=48m -XX:+UseSerialGC
         -XX:ActiveProcessorCount=2 -Xss512k -XX:+ExitOnOutOfMemoryError
-      DB_POOL: ${DB_POOL_APP:-6}
-      TOMCAT_HILOS: ${TOMCAT_HILOS:-40}
+      # Pool de 10: las capturas ocupan una conexión 3 ms (medido), pero los
+      # reportes de la sala tardan 100-300 ms y conviene que no hagan esperar.
+      DB_POOL: ${DB_POOL_APP:-10}
+      # 60 hilos: una captura ocupa un hilo mientras sube la foto, que es lo
+      # que de verdad tarda (1-3 s por red). Con 40, una ráfaga hacía cola.
+      TOMCAT_HILOS: ${TOMCAT_HILOS:-60}
       # La etiqueta con la que se construyó esta imagen. La aplicación la
       # devuelve en /api/version para saber qué corre sin entrar al servidor.
       VERSION_APP: "${IMAGEN_APP:-local}"

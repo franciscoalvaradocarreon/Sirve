@@ -12,6 +12,17 @@ server:
   port: ${PUERTO:8081}
   # Detrás de Caddy: que respete el esquema y el host originales
   forward-headers-strategy: framework
+  # Hilos de atención. Una captura ocupa uno mientras sube la foto —1 a 3
+  # segundos, casi todo red—, así que es lo que se agota antes en una ráfaga.
+  # Con los valores por omisión de Tomcat (200) no se agota, pero cada hilo
+  # reserva su pila: 60 es el número que se midió como suficiente para 300
+  # teléfonos capturando.
+  tomcat:
+    threads:
+      max: ${TOMCAT_HILOS:60}
+      min-spare: 8
+    accept-count: 100
+    max-connections: 400
 
 spring:
   # La foto del acta llega por partes; el límite por omisión es de 1 MB y no
