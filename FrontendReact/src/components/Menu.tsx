@@ -189,10 +189,15 @@ export function Menu({ colapsado, onAlternar }: Props) {
 
         {!colapsado && version && (
           <span
-            className="shrink-0 font-mono text-[11px] text-texto-tenue"
+            className="min-w-0 truncate text-right font-mono text-[11px] text-texto-tenue"
             title={`Versión desplegada: ${version}`}
           >
-            {version}
+            {/*
+             * La versión llega como referencia completa de la imagen
+             * (ghcr.io/usuario/sirve:v1.0.9). En la barra solo cabe la
+             * etiqueta; la referencia entera queda en el título.
+             */}
+            {version.includes(':') ? version.slice(version.lastIndexOf(':') + 1) : version}
           </span>
         )}
       </div>
