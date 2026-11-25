@@ -285,7 +285,12 @@ export function HistorialCaptura() {
                           </span>
                           <span className="text-texto-tenue">votos {numero(fila.votos_antes)}</span>
                           {fila.agente && (
-                            <span className="font-mono text-texto-tenue/70">{fila.agente}</span>
+                            <span
+                              className="max-w-[38ch] truncate font-mono text-texto-tenue/70"
+                              title={fila.agente}
+                            >
+                              {fila.agente}
+                            </span>
                           )}
                         </>
                       )}
