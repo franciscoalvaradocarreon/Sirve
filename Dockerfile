@@ -28,7 +28,7 @@ RUN node node_modules/vite/bin/vite.js build
 
 
 # ---------- Etapa 2: compilar el backend con el front dentro ----------
-FROM maven:3.9-eclipse-temurin-21 AS back
+FROM maven:3.9-eclipse-temurin-26 AS back
 WORKDIR /build
 
 COPY BackendJava/pom.xml ./
