@@ -34,13 +34,21 @@ public class CapturaHistorialRepositorio {
      */
     public void marcarActor(String idUsuario, String login, Integer idCapturista,
                             Integer idDispositivo, String ip, String agente) {
+        /*
+         * Los seis set_config van unidos con «||» por una razón mecánica: así la
+         * consulta devuelve una sola columna. Sueltos, el SELECT devolvería seis
+         * y Spring, que espera una, falla con «Incorrect column count».
+         *
+         * No se usa COALESCE: evaluaría solo el primero y los demás no llegarían
+         * a ejecutarse. Con «||» se evalúan los seis aunque el resultado sea nulo.
+         */
         jdbc.queryForObject("""
                 SELECT set_config('app.actor_usuario', ?, true)
-                     , set_config('app.actor_login', ?, true)
-                     , set_config('app.actor_capturista', ?, true)
-                     , set_config('app.actor_dispositivo', ?, true)
-                     , set_config('app.ip', ?, true)
-                     , set_config('app.agente', ?, true)
+                    || set_config('app.actor_login', ?, true)
+                    || set_config('app.actor_capturista', ?, true)
+                    || set_config('app.actor_dispositivo', ?, true)
+                    || set_config('app.ip', ?, true)
+                    || set_config('app.agente', ?, true)
                 """, String.class,
                 idUsuario, login,
                 idCapturista == null ? null : idCapturista.toString(),
