@@ -11,7 +11,7 @@
 
 
 # ---------- Etapa 1: compilar el frontend ----------
-FROM node:22-alpine AS front
+FROM node:26-alpine AS front
 WORKDIR /front
 
 # Primero los manifiestos: si el código cambia pero no las dependencias,
