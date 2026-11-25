@@ -45,7 +45,7 @@ RUN --mount=type=cache,target=/root/.m2 mvn -B -q clean package -DskipTests
 
 
 # ---------- Etapa 3: ejecución ----------
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 
 # Usuario sin privilegios: si alguien entra por un fallo de la aplicación, no
 # es root dentro del contenedor.
