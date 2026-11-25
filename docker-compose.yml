@@ -141,7 +141,10 @@ services:
       JWT_CLAVE:            "${JWT_CLAVE:?falta JWT_CLAVE en .env: firma los tokens de sesión}"
       JWT_HORAS:            "${JWT_HORAS:-12}"
       ENROLAMIENTO_HORAS:   "${ENROLAMIENTO_HORAS:-3}"
-      SALA_HABILITADA:      "${SALA_HABILITADA:-false}"
+      # La sala de resultados NO se controla aquí: es el parámetro
+      # `sala.habilitada` de la tabla sirve.parametro, y se cambia desde la
+      # pantalla de Parámetros. Hubo una variable aquí y era peor que nada:
+      # se ponía en «false» y la sala seguía encendida.
       LIMITE_CREDENCIAL:    "${LIMITE_CREDENCIAL:-600}"
       LIMITE_ANONIMA:       "${LIMITE_ANONIMA:-300}"
       LIMITE_CREDENCIALES:  "${LIMITE_CREDENCIALES:-20}"

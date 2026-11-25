@@ -170,7 +170,6 @@ JWT_CLAVE=…                   48 caracteres
 JWT_HORAS=12
 MAIL_HOST=… MAIL_PORT=… MAIL_USERNAME=… MAIL_PASSWORD=…
 ALERTAS_NOMBRE=SIRVE-P
-SALA_HABILITADA=false
 TZ=America/Monterrey
 RUTA_PLANOS=/opt/sirve-p/planos
 IMAGEN_APP=ghcr.io/franciscoalvaradocarreon/sirve:vX.Y.Z
@@ -178,6 +177,16 @@ IMAGEN_APP=ghcr.io/franciscoalvaradocarreon/sirve:vX.Y.Z
 
 Las claves se generan con `openssl rand -base64 48 | tr -dc A-Za-z0-9 | head -c 32`.
 La del correo es la misma cuenta que usa el SIH.
+
+**La sala de resultados no está aquí.** No hay variable de entorno: es el
+parámetro `sala.habilitada` de la tabla `sirve.parametro`, y se cambia desde la
+pantalla **Operación → Parámetros**. Se lee en cada petición, así que apagarla
+surte efecto al instante (comprobado: con `false` la API responde
+`habilitada:false`, el mensaje configurado y la lista de elecciones vacía).
+
+Hubo una variable `SALA_HABILITADA` en este archivo y en el compose. Se quitó
+porque era peor que no tenerla: se ponía en `false` y la sala seguía encendida,
+porque la aplicación nunca la leyó.
 
 ### 2.6 La base
 
