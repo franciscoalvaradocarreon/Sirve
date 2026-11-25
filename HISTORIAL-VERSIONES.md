@@ -93,3 +93,44 @@ Si se prefiere la continuidad, la serie 1.0.x se puede retomar sin tocar nada
 de lo desplegado: bastaría etiquetar `v1.0.8` a `v1.0.12` sobre los mismos
 commits que hoy tienen v2.0.0 a v2.0.4. Las imágenes ya publicadas en GHCR
 conservan su etiqueta; renombrarlas no cambia lo que corre.
+
+---
+
+## Decisión: se retoma la serie 1.0.x
+
+El 25 de noviembre se decidió **volver a la numeración 1.0.x** y seguir desde
+la última versión que se publicó con ese esquema:
+
+```
+v1.0.7    18-nov-2026   última de la serie original
+v1.0.8    la próxima liberación
+```
+
+**v2.0.0 a v2.0.4 quedan como una isla.** No se renumeran ni se crean etiquetas
+alternas: los commits y las imágenes ya publicadas conservan su nombre, y las
+etiquetas `v2.0.x` siguen existiendo para poder volver a ellas.
+
+La consecuencia práctica es que **v1.0.8 contiene todo lo que traían v2.0.0 a
+v2.0.4**, más lo que se libere con ella:
+
+```
+del servidor nuevo        límites para 1 GB · despliegue desde GitHub
+de v2.0.1                 actas de 1440 px y calidad 0.62
+de v2.0.2                 pool de 10 conexiones · 60 hilos de Tomcat
+de v2.0.3 y v2.0.4        traza de capturas con triggers
+```
+
+Quien lea el historial dentro de un año debe saber que el salto de 1.0.7 a
+1.0.8 **no es pequeño**: son cinco liberaciones juntas.
+
+### La regla, para adelante
+
+```
+tercer número   correcciones            v1.0.9, v1.0.10…
+segundo número  funciones nuevas        v1.1.0
+primer número   cambia la plataforma    v2.0.0 — y se consulta antes
+```
+
+La numeración es una decisión de quien opera el sistema. Un salto de primer
+número se pregunta antes de liberarlo, no se explica después.
+
