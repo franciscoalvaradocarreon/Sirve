@@ -12,6 +12,7 @@ import { Avance } from './components/Avance'
 import { Capturistas } from './components/Capturistas'
 import { AsignacionReporte } from './components/AsignacionReporte'
 import { ActasReporte } from './components/ActasReporte'
+import { HistorialCaptura } from './components/HistorialCaptura'
 import { CapturistaFormulario } from './components/CapturistaFormulario'
 import { EnConstruccion } from './components/EnConstruccion'
 import { MovilLayout } from './movil/MovilLayout'
@@ -62,6 +63,7 @@ export default function App() {
             <Route path="/reportes/operacion" element={<Operacion />} />
             <Route path="/reportes/asignacion" element={<AsignacionReporte />} />
             <Route path="/reportes/actas" element={<ActasReporte />} />
+            <Route path="/reportes/historial" element={<HistorialCaptura />} />
             <Route path="/capturistas" element={<Capturistas />} />
             <Route path="/capturistas/nuevo" element={<CapturistaFormulario />} />
             <Route path="/capturistas/importar" element={<ImportarCapturistas />} />

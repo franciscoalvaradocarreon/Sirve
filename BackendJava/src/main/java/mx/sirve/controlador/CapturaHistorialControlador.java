@@ -1,5 +1,6 @@
 package mx.sirve.controlador;
 
+import mx.sirve.modelo.dto.HistorialCambioDTO;
 import mx.sirve.repositorio.CapturaHistorialRepositorio;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -30,6 +31,22 @@ public class CapturaHistorialControlador {
 
     public CapturaHistorialControlador(CapturaHistorialRepositorio historial) {
         this.historial = historial;
+    }
+
+    /**
+     * Cambios filtrados por municipio, sección, casilla y elección.
+     *
+     * Todos los filtros son opcionales: sin ninguno devuelve lo más reciente del
+     * sistema, que es lo que sirve para revisar la jornada en caliente.
+     */
+    @GetMapping
+    public HistorialCambioDTO.Pagina buscar(
+            @RequestParam(name = "id_municipio", required = false) Integer idMunicipio,
+            @RequestParam(required = false) String seccion,
+            @RequestParam(required = false) String casilla,
+            @RequestParam(name = "id_eleccion", required = false) Integer idEleccion,
+            @RequestParam(defaultValue = "0") int limite) {
+        return historial.buscar(idMunicipio, seccion, casilla, idEleccion, acotar(limite));
     }
 
     /** Todo lo que le pasó a una casilla en una elección, lo más reciente primero. */
