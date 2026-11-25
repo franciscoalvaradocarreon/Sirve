@@ -27,6 +27,7 @@ public record HistorialCambioDTO(
         String municipio,
         String seccion,
         String casilla,
+        String tipo,
 
         Integer antesTotal,
         Integer antesSuma,

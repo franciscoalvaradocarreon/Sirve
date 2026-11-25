@@ -261,7 +261,7 @@ export function HistorialCaptura() {
                     </span>
 
                     <span className="mt-1 block text-xs text-texto-tenue">
-                      {fila.municipio} · sección {fila.seccion} · casilla {fila.casilla}
+                      {fila.municipio} · sección {fila.seccion} · casilla {fila.tipo || fila.casilla.split('-').pop()}
                     </span>
 
                     <span className="mt-1 flex flex-wrap items-baseline gap-x-3 text-xs tabular-nums">

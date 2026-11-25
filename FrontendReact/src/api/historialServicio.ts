@@ -17,6 +17,7 @@ export interface CambioHistorial {
   municipio: string
   seccion: string
   casilla: string
+  tipo: string
 
   antes_total: number | null
   antes_suma: number | null

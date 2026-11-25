@@ -108,9 +108,9 @@ public class CapturaHistorialRepositorio {
 
         List<HistorialCambioDTO> filas = jdbc.query("""
                 SELECT h.id, h.accion, h.actor_login, h.actor_usuario::text AS actor_usuario,
-                       h.actor_capturista, h.actor_dispositivo, h.ip::text AS ip, h.agente,
+                       h.actor_capturista, h.actor_dispositivo, host(h.ip) AS ip, h.agente,
                        h.ocurrido_en, h.id_casilla, h.id_eleccion,
-                       m.nombre AS municipio, s.clave AS seccion, k.clave AS casilla,
+                       m.nombre AS municipio, s.clave AS seccion, k.clave AS casilla, k.tipo AS tipo,
                        (h.anterior->'captura'->>'total_acta')::int    AS antes_total,
                        (h.anterior->'captura'->>'suma_opciones')::int AS antes_suma,
                        (h.anterior->'captura'->>'nulos')::int         AS antes_nulos,
@@ -136,6 +136,7 @@ public class CapturaHistorialRepositorio {
                         rs.getString("municipio"),
                         rs.getString("seccion"),
                         rs.getString("casilla"),
+                        rs.getString("tipo"),
                         (Integer) rs.getObject("antes_total"),
                         (Integer) rs.getObject("antes_suma"),
                         (Integer) rs.getObject("antes_nulos"),
