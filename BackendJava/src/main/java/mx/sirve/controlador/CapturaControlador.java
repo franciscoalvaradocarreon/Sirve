@@ -57,9 +57,30 @@ public class CapturaControlador {
             @Valid @RequestBody CapturaCrearDTO datos,
             @RequestAttribute(name = PaseFiltro.ATRIBUTO_CAPTURISTA, required = false) Integer idCapturista,
             @RequestAttribute(name = PaseFiltro.ATRIBUTO_DISPOSITIVO, required = false) Integer idDispositivo,
-            @RequestAttribute(name = JwtServicio.ATRIBUTO_USUARIO, required = false) JwtServicio.DatosToken sesion) {
+            @RequestAttribute(name = JwtServicio.ATRIBUTO_USUARIO, required = false) JwtServicio.DatosToken sesion,
+            jakarta.servlet.http.HttpServletRequest peticion) {
+
+        /*
+         * La traza la escribe un trigger de la base; aquí solo se le dice quién
+         * y desde dónde. La IP se toma de X-Forwarded-For porque delante está
+         * Caddy: sin eso quedaría la del proxy en todas las filas, que no sirve
+         * para nada.
+         */
         CapturaDTO guardada = capturaServicio.guardar(datos, idCapturista, idDispositivo,
-                sesion == null ? null : sesion.idUsuario());
+                sesion == null ? null : sesion.idUsuario(),
+                sesion == null ? null : sesion.usuario(),
+                cliente(peticion),
+                peticion.getHeader("User-Agent"));
         return ResponseEntity.status(HttpStatus.CREATED).body(guardada);
+    }
+
+    /** La IP real del cliente: la primera de X-Forwarded-For, o la de la conexión. */
+    private static String cliente(jakarta.servlet.http.HttpServletRequest peticion) {
+        String reenviada = peticion.getHeader("X-Forwarded-For");
+        if (reenviada != null && !reenviada.isBlank()) {
+            int coma = reenviada.indexOf(',');
+            return (coma > 0 ? reenviada.substring(0, coma) : reenviada).trim();
+        }
+        return peticion.getRemoteAddr();
     }
 }

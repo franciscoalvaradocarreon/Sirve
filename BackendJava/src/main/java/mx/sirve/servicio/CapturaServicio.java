@@ -6,6 +6,7 @@ import mx.sirve.modelo.dto.CapturaCrearDTO;
 import mx.sirve.modelo.dto.CapturaDTO;
 import mx.sirve.modelo.dto.OpcionBoletaDTO;
 import mx.sirve.modelo.dto.VotoDTO;
+import mx.sirve.repositorio.CapturaHistorialRepositorio;
 import mx.sirve.repositorio.CapturaRepositorio;
 import mx.sirve.repositorio.CapturistaRepositorio;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -31,11 +32,14 @@ public class CapturaServicio {
 
     private final CapturaRepositorio capturaRepositorio;
     private final CapturistaRepositorio capturistaRepositorio;
+    private final CapturaHistorialRepositorio historial;
 
     public CapturaServicio(CapturaRepositorio capturaRepositorio,
-                           CapturistaRepositorio capturistaRepositorio) {
+                           CapturistaRepositorio capturistaRepositorio,
+                           CapturaHistorialRepositorio historial) {
         this.capturaRepositorio = capturaRepositorio;
         this.capturistaRepositorio = capturistaRepositorio;
+        this.historial = historial;
     }
 
     @Transactional(readOnly = true)
@@ -56,8 +60,16 @@ public class CapturaServicio {
      */
     @Transactional
     public CapturaDTO guardar(CapturaCrearDTO datos, Integer idCapturista, Integer idDispositivo,
-                              String idUsuario) {
+                              String idUsuario, String login, String ip, String agente) {
         validar(datos);
+
+        /*
+         * Quién escribe. Lo anota un trigger de la base, pero el trigger no
+         * puede adivinar quién está detrás de la petición: se lo decimos aquí,
+         * dentro de esta misma transacción. Si la escritura no pasara por aquí,
+         * el cambio se registraría igual, con el actor vacío.
+         */
+        historial.marcarActor(idUsuario, login, idCapturista, idDispositivo, ip, agente);
 
         /*
          * El pase identifica a una persona con sus casillas. Aunque alguien
