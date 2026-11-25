@@ -61,3 +61,35 @@ liberada antes del reinicio.
 | v1.6.12 | `29b624fd3edb6a1cf9ce1843800d1c4ee5827cfd` |
 | v1.6.13 | `c4df8e17f7ca7c52bae99cbfcdff0b42efd5c35a` |
 | v1.6.14 | `183c3925c4dfb7ab35f7dbf954f4ddd67b070974` |
+
+---
+
+## Del 1.0.7 al 2.0.0: el salto que nadie avisó
+
+La serie 1.0.x se cortó en **v1.0.7** (18 de noviembre), la última versión que
+corrió en el servidor anterior. Ese servidor se perdió al vencer la prueba de
+Oracle, y todo lo que vino después se reconstruyó en una máquina distinta.
+
+| Etiqueta | Fecha | Qué cambió |
+|---|---|---|
+| v1.0.7 | 2026-11-18 | última en el servidor viejo (Oracle Linux, ARM, 22 GB) |
+| v2.0.0 | 2026-11-23 | primer despliegue en el servidor nuevo (Ubuntu, x86, 1 GB) |
+| v2.0.1 | 2026-11-23 | actas más livianas: 1440 px y calidad 0.62 |
+| v2.0.2 | 2026-11-24 | pool de 10 conexiones y 60 hilos de Tomcat |
+| v2.0.3 | 2026-11-25 | traza de capturas con triggers |
+| v2.0.4 | 2026-11-25 | corrección de `set_config` |
+
+**Por qué 2.0.0 y no 1.0.8.** El salto de número mayor marcó un cambio de
+plataforma, no de funciones: otro sistema operativo, otro procesador, otra
+forma de construir la imagen —de compilar en el servidor a construirlo en
+GitHub— y la base restaurada desde un volcado en lugar de migrada. La intención
+era que «2.x» dijera «esto corre en el servidor nuevo».
+
+**Lo que estuvo mal** fue hacerlo sin avisar. La numeración es una decisión de
+quien opera el sistema, no del que escribe el código, y un salto de mayor sin
+explicación obliga a preguntar «¿cuándo pasó esto?».
+
+Si se prefiere la continuidad, la serie 1.0.x se puede retomar sin tocar nada
+de lo desplegado: bastaría etiquetar `v1.0.8` a `v1.0.12` sobre los mismos
+commits que hoy tienen v2.0.0 a v2.0.4. Las imágenes ya publicadas en GHCR
+conservan su etiqueta; renombrarlas no cambia lo que corre.
