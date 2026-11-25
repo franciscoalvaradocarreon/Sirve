@@ -1,0 +1,70 @@
+# Actualizaciones automáticas de dependencias (Dependabot).
+#
+# Cada lunes abre pull requests con las versiones nuevas. El CI de este
+# repositorio es la aduana: nada llega a main sin compilar, sin pasar la
+# revisión del esquema y sin construir la imagen, así que una actualización que
+# rompa algo se ve en el propio pull request.
+#
+# OJO: esto configura las actualizaciones de VERSIÓN. Las de SEGURIDAD —las que
+# salen cuando aparece una vulnerabilidad en una dependencia— no se configuran
+# aquí: se activan en el repositorio, en Settings → Code security →
+# «Dependabot alerts» y «Dependabot security updates».
+#
+# Los «groups» juntan actualizaciones relacionadas en un solo pull request, para
+# no llenar la lista con veinte avisos de la misma familia.
+
+version: 2
+updates:
+
+  # Backend: Maven (Spring Boot, Jackson, jjwt, driver de PostgreSQL…)
+  - package-ecosystem: maven
+    directory: /BackendJava
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: America/Monterrey
+    open-pull-requests-limit: 5
+    groups:
+      spring:
+        patterns:
+          - "org.springframework*"
+          - "org.springframework.boot*"
+      pruebas:
+        patterns:
+          - "org.junit*"
+          - "org.mockito*"
+          - "org.assertj*"
+
+  # Frontend: npm (React, Vite, Tailwind, axios, lucide…)
+  - package-ecosystem: npm
+    directory: /FrontendReact
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: America/Monterrey
+    open-pull-requests-limit: 5
+    groups:
+      react:
+        patterns:
+          - "react*"
+          - "@types/react*"
+      vite:
+        patterns:
+          - "vite"
+          - "@vitejs/*"
+
+  # Las acciones del propio flujo de trabajo (checkout, build-push, login…)
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+
+  # Las imágenes base del Dockerfile: node, maven y el JRE de Alpine
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
